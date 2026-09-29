@@ -5,6 +5,10 @@
 ## 项目结构
 
 ```
+├── docs/                     # 治理文档（Diátaxis 四象限，见 docs/GOVERNANCE.md）
+│   ├── index.md              # 知识库总入口
+│   ├── llms.txt              # AI 智能体机器地图
+│   └── reference/api/        # SDK 接口参考（机器真理源）
 ├── pyproject.toml            # 主项目（包 bd_net_disc_mgr，入口 bd-net-disc-mgr）
 ├── src/bd_net_disc_mgr/      # 业务代码
 ├── vendor/baidu-pan-sdk/     # 官方 openapi_client SDK 的 vendor 本地包（见其 README）
