@@ -1,6 +1,19 @@
-# bd-net-disc-mgr
+# bdpan-cli
 
-个人百度网盘文件数据资料管理工具。基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 Python SDK，使用 Python + uv 构建。
+百度网盘工程化 CLI 管理工具。基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 Python SDK，使用 Python + uv 构建。
+
+## 命令行使用 (CLI)
+
+```bash
+# 查看帮助
+uv run bdpan --help
+
+# 常用命令
+uv run bdpan ls /影视/电影
+uv run bdpan mkdir /新目录
+uv run bdpan mv <源路径> <目标路径>
+uv run bdpan scrape foldering /影视/电影/unscraped
+```
 
 ## 项目结构
 
@@ -9,8 +22,8 @@
 │   ├── index.md              # 知识库总入口
 │   ├── llms.txt              # AI 智能体机器地图
 │   └── reference/api/        # SDK 接口参考（机器真理源）
-├── pyproject.toml            # 主项目（包 bd_net_disc_mgr，入口 bd-net-disc-mgr）
-├── src/bd_net_disc_mgr/      # 业务代码
+├── pyproject.toml            # 主项目（包 bdpan_cli，入口 bdpan / bdpan-cli）
+├── src/bdpan_cli/            # 业务代码与 CLI 入口
 ├── vendor/baidu-pan-sdk/     # 官方 openapi_client SDK 的 vendor 本地包（见其 README）
 ├── uv.lock
 └── .python-version           # 3.12
@@ -20,7 +33,7 @@
 
 ```bash
 uv sync        # 创建 .venv 并安装依赖（含 vendor SDK）
-uv run bd-net-disc-mgr
+uv run bdpan
 ```
 
 ## 应用凭证配置

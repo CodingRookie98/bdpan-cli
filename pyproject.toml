@@ -1,7 +1,7 @@
 [project]
-name = "bd-net-disc-mgr"
+name = "bdpan-cli"
 version = "0.1.0"
-description = "个人百度网盘文件数据资料管理工具"
+description = "百度网盘工程化 CLI 管理工具"
 readme = "README.md"
 authors = [
     { name = "CodingRookie98", email = "520whjoker@gmail.com" }
@@ -13,7 +13,9 @@ dependencies = [
 ]
 
 [project.scripts]
-bd-net-disc-mgr = "bd_net_disc_mgr:main"
+bdpan = "bdpan_cli.cli:main"
+bdpan-cli = "bdpan_cli.cli:main"
+bd-net-disc-mgr = "bdpan_cli.cli:main"
 
 [tool.uv.sources]
 baidu-pan-sdk = { path = "vendor/baidu-pan-sdk", editable = true }
@@ -29,5 +31,7 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-p no:ament_copyright -p no:ament_flake8 -p no:ament_pep257 -p no:ament_lint -p no:launch_testing -p no:launch_testing_ros -p no:launch_testing_ros_pytest_entrypoint"
+
 
 

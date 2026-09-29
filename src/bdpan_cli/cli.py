@@ -9,15 +9,15 @@ import os
 import sys
 from typing import Any
 
-from bd_net_disc_mgr.auth import TokenManager
-from bd_net_disc_mgr.config import load_config
-from bd_net_disc_mgr.file_manager import FileManager
-from bd_net_disc_mgr.foldering import execute_foldering, plan_foldering
-from bd_net_disc_mgr.preview_scrape import generate_preview
-from bd_net_disc_mgr.apply_scrape_rename import apply_renames
+from bdpan_cli.auth import TokenManager
+from bdpan_cli.config import load_config
+from bdpan_cli.file_manager import FileManager
+from bdpan_cli.foldering import execute_foldering, plan_foldering
+from bdpan_cli.preview_scrape import generate_preview
+from bdpan_cli.apply_scrape_rename import apply_renames
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("bd_net_disc_mgr.cli")
+logger = logging.getLogger("bdpan_cli.cli")
 
 
 def _get_file_manager() -> FileManager:
@@ -152,8 +152,8 @@ def cmd_meta_poster(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="bd-net-disc-mgr",
-        description="百度网盘媒体库与文件工程化管理工具",
+        prog="bdpan",
+        description="百度网盘工程化 CLI 管理工具",
     )
     subparsers = parser.add_subparsers(dest="command", help="可用子命令")
 

@@ -2,13 +2,13 @@
 
 ## 进行中
 
-- [ ] 项目全面重新定位与品牌重命名：重命名为百度网盘专业 CLI 工具（确定名称、更新 pyproject.toml、CLI 命令别名、文档与代码引用）
+（暂无进行中任务，准备进入第三阶段元数据与封面海报自动化生成）
 
 ## 计划中
 
 - [ ] 第三阶段：电影元数据与封面海报全量自动化生成与上传 (`meta` 子系统)
-  - [ ] `bd-net-disc-mgr meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
-  - [ ] `bd-net-disc-mgr meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
+  - [ ] `bdpan meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
+  - [ ] `bdpan meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
   - [ ] 支持断点续传、已存在跳过（幂等性）与 `--dry-run` 预览模式
   - [ ] 对 `/影视/电影/watched`（266部）与 `/影视/电影/unwatched`（36部）共 302 部电影全量批处理
 - [ ] 递归遍历网盘文件树（`MultimediafileApi.xpanfilelistall`）并落地本地索引
@@ -19,8 +19,9 @@
 
 ## 已关闭
 
+- [x] 项目全面重新定位与品牌重命名：重命名为 `bdpan-cli`，主命令 `bdpan`（完成代码包迁移、pyproject.toml、CLI 别名与全量测试，2026-09-29）
 - [x] 媒体库终态拓扑规整（`unscraped` 电影并入 `watched`，`pending_triage` 更名为 `torrents`，全库 302 部电影 100% 达标，2026-09-29）
-- [x] 工程化统一 CLI 工具构建与 `scrape foldering` 落地（实现 `bd-net-disc-mgr` 统一子命令体系，完成 `/影视/电影/unscraped` 17个散落文件建目录与规整，2026-09-29）
+- [x] 工程化统一 CLI 工具构建与 `scrape foldering` 落地（实现统一子命令体系，完成 `/影视/电影/unscraped` 17个散落文件建目录与规整，2026-09-29）
 - [x] 特殊条目解耦与分类（`Scario(1-2)` 拆分为边境杀手 1 与 2，`Seed.Bank` 归集至 `pending_triage`，2026-09-29）
 - [x] 电影目录名方案 A 规范化刮削与批量更名（`unwatched` 36部 + `watched` 251部，全量 287 部 100% 达标，2026-09-29）
 - [x] 电影目录结构规整第一步（`unwatched` 重命名、`watched` 归档、`pending_triage` 杂项归集，2026-09-29）

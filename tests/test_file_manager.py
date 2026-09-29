@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from bd_net_disc_mgr.file_manager import FileManager, FileManagerError
+from bdpan_cli.file_manager import FileManager, FileManagerError
 
 
 def test_list_dir_pagination():

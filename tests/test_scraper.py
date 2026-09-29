@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bd_net_disc_mgr.scraper import MovieMetadata, MovieScraper
+from bdpan_cli.scraper import MovieMetadata, MovieScraper
 
 
 def test_movie_metadata_formatted_name():

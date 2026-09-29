@@ -9,5 +9,5 @@
 
 ## Project Governance (工程演进 / 发布日志与待办)
 
-- [待办与后续方向 (Backlog)](project/backlog.md)
+- [待办与后续方向 (Backlog)](project/backlog.md): （暂无进行中任务，准备进入第三阶段元数据与封面海报自动化生成）
 - [变更日志 (Changelog)](project/changelog.md)

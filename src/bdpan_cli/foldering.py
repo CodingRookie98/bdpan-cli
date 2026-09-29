@@ -7,8 +7,8 @@ import os
 import re
 from typing import Any
 
-from bd_net_disc_mgr.file_manager import FileManager
-from bd_net_disc_mgr.scraper import MovieScraper
+from bdpan_cli.file_manager import FileManager
+from bdpan_cli.scraper import MovieScraper
 
 logger = logging.getLogger(__name__)
 

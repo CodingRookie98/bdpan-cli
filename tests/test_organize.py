@@ -2,12 +2,12 @@
 
 from unittest.mock import MagicMock, patch
 
-from bd_net_disc_mgr.organize import run_organization
+from bdpan_cli.organize import run_organization
 
 
-@patch("bd_net_disc_mgr.organize.load_config")
-@patch("bd_net_disc_mgr.organize.TokenManager")
-@patch("bd_net_disc_mgr.organize.FileManager")
+@patch("bdpan_cli.organize.load_config")
+@patch("bdpan_cli.organize.TokenManager")
+@patch("bdpan_cli.organize.FileManager")
 def test_run_organization_flow(mock_mgr_cls, mock_token_cls, mock_config):
     mock_mgr = MagicMock()
     mock_mgr_cls.return_value = mock_mgr

@@ -3,12 +3,12 @@
 import json
 from unittest.mock import MagicMock, patch
 
-from bd_net_disc_mgr.apply_scrape_rename import apply_renames
+from bdpan_cli.apply_scrape_rename import apply_renames
 
 
-@patch("bd_net_disc_mgr.apply_scrape_rename.load_config")
-@patch("bd_net_disc_mgr.apply_scrape_rename.TokenManager")
-@patch("bd_net_disc_mgr.apply_scrape_rename.FileManager")
+@patch("bdpan_cli.apply_scrape_rename.load_config")
+@patch("bdpan_cli.apply_scrape_rename.TokenManager")
+@patch("bdpan_cli.apply_scrape_rename.FileManager")
 def test_apply_renames_flow(mock_mgr_cls, mock_token_cls, mock_config, tmp_path):
     mock_mgr = MagicMock()
     mock_mgr_cls.return_value = mock_mgr

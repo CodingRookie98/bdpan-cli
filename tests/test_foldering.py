@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
-from bd_net_disc_mgr.foldering import plan_foldering, execute_foldering
-from bd_net_disc_mgr.scraper import MovieMetadata
+from bdpan_cli.foldering import plan_foldering, execute_foldering
+from bdpan_cli.scraper import MovieMetadata
 
 
 def test_plan_foldering():

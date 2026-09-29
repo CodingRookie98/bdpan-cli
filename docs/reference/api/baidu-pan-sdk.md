@@ -109,7 +109,7 @@ SDK 覆盖 6 个 API 类、19 个接口，统一携带固定查询参数 `openap
 
 已知事实（源码核实）：`oauth_token_device_code` 必填参数为 `client_id`、`scope`；响应模型 `OauthTokenDeviceCodeResponse` 字段为 `device_code`、`user_code`、`verification_url`、`qrcode_url`、`expires_in`、`interval`。`oauth_token_device_token` 必填参数为 `code`（即 device_code）、`client_id`、`client_secret`；响应字段为 `access_token`、`refresh_token`、`expires_in`、`session_key`、`session_secret`、`scope`。
 
-已知事实（实测核实）：本仓库 `TokenManager`（[auth.py](../../../src/bd_net_disc_mgr/auth.py)）以 scope=`basic,netdisk` 走设备码模式，access_token 有效期 30 天，refresh_token 有效期 10 年。
+已知事实（实测核实）：本仓库 `TokenManager`（[auth.py](../../../src/bdpan_cli/auth.py)）以 scope=`basic,netdisk` 走设备码模式，access_token 有效期 30 天，refresh_token 有效期 10 年。
 
 
 ## 4. 错误信封

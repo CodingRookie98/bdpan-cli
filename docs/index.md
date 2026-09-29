@@ -1,6 +1,6 @@
-# bd-net-disc-mgr 知识库索引
+# bdpan-cli 知识库索引
 
-> 个人百度网盘文件数据资料管理工具 —— 基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 Python SDK，Python 3.12 + uv。
+> 百度网盘工程化 CLI 管理工具 —— 基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 Python SDK，Python 3.12 + uv。
 
 ## 知识库拓扑
 

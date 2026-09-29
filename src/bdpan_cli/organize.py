@@ -6,9 +6,9 @@ import logging
 import sys
 from typing import Any
 
-from bd_net_disc_mgr.auth import TokenManager
-from bd_net_disc_mgr.config import load_config
-from bd_net_disc_mgr.file_manager import FileManager
+from bdpan_cli.auth import TokenManager
+from bdpan_cli.config import load_config
+from bdpan_cli.file_manager import FileManager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)

@@ -4,6 +4,7 @@
 
 ## 2026-09-29
 
+- **chore(rebrand)**: 项目全面重新定位并更名为 `bdpan-cli`，提供终端命令 `bdpan`（保留 `bdpan-cli` 与 `bd-net-disc-mgr` 别名兼容）。Python 源码包重构为 `bdpan_cli`，更新内部导入路径、pyproject.toml 与相关文档引用。
 - **feat**: 完成媒体库全量终态拓扑归集与种子归类。将 `/影视/电影/unscraped` 下的电影规整移入 `/影视/电影/watched`（其中 15 部整目录迁入，1 部《唐朝豪放女》zip 压缩包无缝合并入现有目录，资产零冲突零丢失）；将 `/影视/电影/pending_triage` 正式重命名为 `/影视/电影/torrents`。媒体库最终合规电影总数达 302 部（`watched` 266 部 + `unwatched` 36 部），方案 A 规范符合度 100%。
 - **feat**: 构建统一工程化命令行工具 `bd-net-disc-mgr`（子命令涵盖 `ls`, `mkdir`, `mv`, `scrape preview/apply/foldering`, 以及 `meta` 元数据骨架）。实现 `scrape foldering` 散落媒体文件自动规整：创建 `/影视/电影/unscraped` 目录，将 17 个散落视频与压缩包原子移入并自动匹配 TMDB 方案 A 规范目录，成功创建 16 个规范电影目录并归集文件。全库合规电影目录数达到 303 部（`unwatched` 36 + `watched` 251 + `unscraped` 16，合规率 100%）。
 - **feat**: 完成特殊条目解耦与分类治理。将 `Scario(1-2)` 拆分为《边境杀手》(2015) 与《边境杀手2：边境战士》(2018) 独立方案 A 规范目录，各视频与字幕文件原子迁移；将 `Seed.Bank.20120430-JOKER` 种子包归集至 `pending_triage`。全库 287 部电影（`unwatched` 36部 + `watched` 251部）目录名规范符合度达到 100%。

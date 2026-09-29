@@ -12,7 +12,7 @@ import openapi_client
 from openapi_client.api.auth_api import AuthApi
 from openapi_client.rest import ApiException
 
-from bd_net_disc_mgr.config import AppConfig
+from bdpan_cli.config import AppConfig
 
 TOKEN_CACHE = Path(__file__).resolve().parents[2] / ".baidupan_tokens.json"
 SCOPE = "basic,netdisk"
