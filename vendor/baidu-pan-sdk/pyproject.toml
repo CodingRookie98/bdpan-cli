@@ -1,0 +1,18 @@
+[project]
+name = "baidu-pan-sdk"
+version = "1.0.0"
+description = "百度网盘开放平台 Python SDK（xpan openapi_client，官方源码 vendor 副本）"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "urllib3>=1.25.3",
+    "python-dateutil>=2.9.0.post0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["openapi_client"]

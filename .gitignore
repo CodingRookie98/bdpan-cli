@@ -1,0 +1,17 @@
+.agents/skills/
+skills-lock.json
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 本地配置与敏感信息（access_token 等）
+.env
+*.local.toml
