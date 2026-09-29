@@ -36,7 +36,7 @@ class MovieMetadata:
         """生成方案 A 规范目录名：[中文译名].[英文原名].[上映年份].[IMDb ID]"""
 
         def sanitize(text: str) -> str:
-            cleaned = re.sub(r'[\/\\:\*\?"<>\|\s_]+', ".", text.strip())
+            cleaned = re.sub(r'[\/\\:\*\?"<>\|\s_,]+', ".", text.strip())
             cleaned = re.sub(r"\.{2,}", ".", cleaned)
             return cleaned.strip(".")
 
@@ -152,9 +152,9 @@ class MovieScraper:
 
         # 4. 提取外文主要名称
         noise_pattern = re.compile(
-            r"\b(1080p|2160p|720p|480p|BluRay|WEB-DL|WEBRip|HDTV|REMUX|UHD|HDR|DV|DDP\d?\.?\d?|"
+            r"\b(1080p|2160p|720p|480p|BluRay|Blu-ray|WEB-DL|WEBRip|HDTV|REMUX|UHD|HDR|DV|DDP\d?\.?\d?|"
             r"Atmos|x264|x265|HEVC|H264|H265|DTS|AAC|TrueHD|FLAC|10bit|60fps|60FPS|REPACK|EXTENDED|"
-            r"Director'?s\.?Cut|KORSUB|BDRip|WEB|4K|Hi10p|AC3|BD|DOCU|DVD)\b",
+            r"Director'?s\.?Cut|KORSUB|BDRip|WEB|4K|2K|DCP|Theatrical|Trailer|Hi10p|AC3|BD|DOCU|DVD|Re)\b",
             re.IGNORECASE,
         )
         text = re.sub(r"\[.*?\]|\(.*?\)", " ", cleaned_name)
