@@ -160,3 +160,20 @@ class FileManager:
                 raise FileManagerError(f"批量移动批次 {i // batch_size + 1} 返回错误: {res}")
             results.append(res)
         return results
+
+    def delete(self, path: str) -> dict[str, Any]:
+        """删除单个文件或目录。"""
+        filelist = json.dumps([path], ensure_ascii=False)
+        try:
+            res = self._filemanager_api.filemanagerdelete(
+                access_token=self.access_token,
+                _async=0,
+                filelist=filelist,
+            )
+        except ApiException as e:
+            raise FileManagerError(f"删除失败 [{path}]: {e.status} {e.body}") from e
+
+        if not isinstance(res, dict) or res.get("errno") != 0:
+            raise FileManagerError(f"删除返回错误 [{path}]: {res}")
+        return res
+
