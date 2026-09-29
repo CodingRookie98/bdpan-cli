@@ -19,6 +19,14 @@ uv sync        # 创建 .venv 并安装依赖（含 vendor SDK）
 uv run bd-net-disc-mgr
 ```
 
+## 应用凭证配置
+
+复制模板并填入开放平台应用的 AppKey / AppSecret（`.env` 已被 git 忽略，不会提交）：
+
+```bash
+cp .env.example .env
+```
+
 ## 使用 SDK
 
 SDK 以可编辑本地包 `baidu-pan-sdk` 依赖引入，直接 `import openapi_client` 即可：
