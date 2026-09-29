@@ -13,7 +13,8 @@ def test_apply_renames_flow(mock_mgr_cls, mock_token_cls, mock_config, tmp_path)
     mock_mgr = MagicMock()
     mock_mgr_cls.return_value = mock_mgr
     mock_mgr.batch_rename.return_value = [{"errno": 0, "info": [{"errno": 0}]}]
-    mock_mgr.list_dir.return_value = []
+    mock_mgr.list_dir.return_value = [{"server_filename": "Old.Movie.2020", "path": "/影视/电影/unwatched/Old.Movie.2020"}]
+
 
     # 创建虚拟 preview.json
     preview_file = tmp_path / "test_preview.json"

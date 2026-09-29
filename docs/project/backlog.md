@@ -2,9 +2,10 @@
 
 ## 进行中
 
-- [ ] 电影自动刮削体系搭建：针对 `/影视/电影/unwatched` 待看目录进行 TMDB/豆瓣元数据匹配、海报与 NFO 生成
+- [ ] 电影元数据与封面海报统一抓取：针对已完成方案 A 规范化更名的全部电影目录统一抓取并生成 `movie.nfo` 与 `poster.jpg`
 
 ## 计划中
+
 
 - [ ] 递归遍历网盘文件树（`MultimediafileApi.xpanfilelistall`）并落地本地索引
 - [ ] 文件搜索 CLI（`FileinfoApi.xpanfilesearch`）
@@ -14,6 +15,7 @@
 
 ## 已关闭
 
+- [x] 电影目录名方案 A 规范化刮削与批量更名（`unwatched` 36部 + `watched` 249部，2026-09-29）
 - [x] 电影目录结构规整第一步（`unwatched` 重命名、`watched` 归档、`pending_triage` 杂项归集，2026-09-29）
 - [x] 文件管理核心能力封装（`FileManager`: mkdir / rename / batch_move / list_dir，2026-09-29）
 - [x] 官方 Python SDK 获取与集成（vendor 包 `baidu-pan-sdk`，2026-09-29）

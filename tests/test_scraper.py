@@ -84,3 +84,64 @@ def test_fetch_by_imdb_id(mock_http):
     assert meta.year == "1997"
     assert meta.imdb_id == "tt0118884"
     assert meta.formatted_name == "超时空接触.Contact.1997.tt0118884"
+
+
+def test_parse_folder_name_consecutive_years_1917():
+    scraper = MovieScraper()
+    parsed = scraper.parse_folder_name("1917.2019.2160p.UHD.BluRay.x265.10bit.HDR.DTS-HD.MA.TrueHD.7.1.Atmos-SWTYBLZ")
+    assert parsed["year"] == "2019"
+    assert parsed["en_title"] == "1917"
+
+
+def test_parse_folder_name_foreign_dash_english():
+    scraper = MovieScraper()
+    parsed = scraper.parse_folder_name("Atomica Bionda - Atomic Blonde (2017) 2160p H265 10 bit ita eng AC3 5.1 sub ita eng Licdom")
+    assert parsed["year"] == "2017"
+    assert parsed["en_title"] == "Atomic Blonde"
+
+
+def test_parse_folder_name_leading_number_chinese():
+    scraper = MovieScraper()
+    parsed = scraper.parse_folder_name("7号房的礼物.Find.Miracle.in.Cell.No.7.2013.tt2659414")
+    assert parsed["zh_title"] == "7号房的礼物"
+    assert parsed["year"] == "2013"
+    assert parsed["imdb_id"] == "tt2659414"
+
+
+def test_movie_metadata_formatted_name_tmdb_fallback():
+    meta = MovieMetadata(
+        title="香港女星图鉴",
+        original_title="The Illustrated Guide to Hong Kong Stars",
+        year="1991",
+        imdb_id="",
+        tmdb_id=1355314,
+    )
+    assert meta.formatted_name == "香港女星图鉴.The.Illustrated.Guide.to.Hong.Kong.Stars.1991.tmdb1355314"
+
+
+@patch.object(MovieScraper, "_http_get")
+def test_search_movie_prioritizes_release_year(mock_http):
+    # 模拟 TMDB 返回两个阿拉丁：1992 年（投票数更多）与 2019 年（与指定年份匹配）
+    mock_http.side_effect = [
+        {
+            "results": [
+                {"id": 812, "title": "阿拉丁", "original_title": "Aladdin", "release_date": "1992-11-25", "vote_count": 12000, "popularity": 50.0},
+                {"id": 420817, "title": "阿拉丁", "original_title": "Aladdin", "release_date": "2019-05-22", "vote_count": 10000, "popularity": 60.0},
+            ]
+        },
+        {
+            "id": 420817,
+            "title": "阿拉丁",
+            "original_title": "Aladdin",
+            "release_date": "2019-05-22",
+            "external_ids": {"imdb_id": "tt6139732"},
+            "translations": {"translations": []},
+        },
+    ]
+    scraper = MovieScraper()
+    meta = scraper.search_movie("Aladdin", year="2019")
+    assert meta is not None
+    assert meta.tmdb_id == 420817
+    assert meta.year == "2019"
+    assert meta.imdb_id == "tt6139732"
+

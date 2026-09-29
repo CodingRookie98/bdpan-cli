@@ -43,14 +43,14 @@ class MovieMetadata:
         zh = sanitize(self.title)
         en = sanitize(self.original_title)
         yr = self.year.strip()
-        imdb = self.imdb_id.strip()
+        imdb = self.imdb_id.strip() if self.imdb_id else (f"tmdb{self.tmdb_id}" if self.tmdb_id else "")
 
         # 如果英文名跟中文名完全一样或全为汉字，则仅保留中文名
         is_en_pure_chinese = bool(re.fullmatch(r"[\u4e00-\u9fa5·.]+", en))
         if zh.lower() == en.lower() or not en or is_en_pure_chinese:
-            base = f"{zh}.{yr}.{imdb}"
+            base = f"{zh}.{yr}.{imdb}".strip(".")
         else:
-            base = f"{zh}.{en}.{yr}.{imdb}"
+            base = f"{zh}.{en}.{yr}.{imdb}".strip(".")
 
         if self.edition:
             base = f"{base}.{sanitize(self.edition)}"
@@ -96,44 +96,110 @@ class MovieScraper:
 
     def parse_folder_name(self, name: str) -> dict[str, str | None]:
         """解析杂乱的原目录名，提取 IMDb ID、中文片名、外文片名和年份。"""
+        # 0. 清理前缀包装，如 "热门 [极速车王 2019]" 与推广后缀 "@公众号..."
+        cleaned_name = re.sub(r"@.*$", "", name)
+        cleaned_name = re.sub(r"【.*?】", " ", cleaned_name)
+        if re.match(r"^(热门|电影|推荐|资源|分享)\s*\[", cleaned_name):
+            bracket_m = re.search(r"\[(.*?)\]", cleaned_name)
+            if bracket_m:
+                cleaned_name = bracket_m.group(1)
+        # 拆分附着在单词后的分辨率 (如 NoBody2160p -> NoBody 2160p)
+        cleaned_name = re.sub(r"(?<=[A-Za-z])(?=\d{3,4}p\b)", " ", cleaned_name)
+        # 移除 S01 / S02
+        cleaned_name = re.sub(r"\bS\d{1,2}\b", " ", cleaned_name)
+        # 移除末尾 Team 标识 (如 PHDTeam)
+        cleaned_name = re.sub(r"\b[A-Za-z0-9]+Team\b", " ", cleaned_name)
+
         # 1. 优先提取已有 tt\d+
-        tt_match = re.search(r"\b(tt\d{7,8})\b", name, re.IGNORECASE)
+        tt_match = re.search(r"\b(tt\d{7,8})\b", cleaned_name, re.IGNORECASE)
         imdb_id = tt_match.group(1).lower() if tt_match else None
 
         # 2. 提取 4 位年份 (1920-2035)
-        year_match = re.search(r"\b(19\d{2}|20[0-3]\d)\b", name)
-        year = year_match.group(1) if year_match else None
+        # 优先提取括号年份 (2018) 或 [2018]
+        year = None
+        paren = re.search(r"[\(\[]\s*(19\d{2}|20[0-3]\d)\s*[\)\]]", cleaned_name)
+        if paren:
+            year = paren.group(1)
+        else:
+            all_years = list(re.finditer(r"\b(19\d{2}|20[0-3]\d)\b", cleaned_name))
+            if len(all_years) == 1:
+                year = all_years[0].group(1)
+            elif len(all_years) > 1:
+                # 如果第一个年份位于开头（0..4），且紧接着有第二个年份（如 1917.2019），第一个是片名，第二个是年份
+                if all_years[0].start() == 0 and all_years[1].start() <= 10:
+                    year = all_years[1].group(1)
+                else:
+                    year = all_years[-1].group(1)
 
-        # 3. 提取中文字符串（若有）
-        cleaned_for_zh = re.sub(
-            r"\[.*?(?:字幕|音轨|版本|高码|帧率|双语|国语|原盘).*?\]|\(.*?(?:字幕|音轨).*?\)",
-            "",
-            name,
+        # 3. 提取中文字符串
+        cleaned_zh = re.sub(
+            r"\[.*?(?:字幕|音轨|版本|高码|帧率|双语|国语|原盘|简|繁|英|4K|1080|2160|蓝光).*?\]|\(.*?(?:字幕|音轨|删减).*?\)",
+            " ",
+            cleaned_name,
         )
-        zh_matches = re.findall(r"[\u4e00-\u9fa5·]{2,}", cleaned_for_zh)
-        zh_title = zh_matches[0] if zh_matches else None
+        cleaned_zh = re.sub(r"[._]+", " ", cleaned_zh)
+        zh_candidates = re.findall(r"[\u4e00-\u9fa50-9：:·\-—]{2,}", cleaned_zh)
+        tag_words = {
+            "测试版", "删减版", "合集", "加长收藏版", "蓝光原盘", "中英双字", "国语音轨",
+            "高码版", "国语配音", "特效字幕", "内封简英双字", "国语中字", "简繁字幕", "国语", "粤语配音",
+        }
+        zh_title = None
+        for cand in zh_candidates:
+            cand_clean = cand.strip("：:·-— ")
+            if any("\u4e00" <= ch <= "\u9fa5" for ch in cand_clean) and cand_clean not in tag_words:
+                zh_title = cand_clean
+                break
 
         # 4. 提取外文主要名称
-        noise_pattern = (
+        noise_pattern = re.compile(
             r"\b(1080p|2160p|720p|480p|BluRay|WEB-DL|WEBRip|HDTV|REMUX|UHD|HDR|DV|DDP\d?\.?\d?|"
             r"Atmos|x264|x265|HEVC|H264|H265|DTS|AAC|TrueHD|FLAC|10bit|60fps|60FPS|REPACK|EXTENDED|"
-            r"Director'?s\.?Cut|GERMAN|KOREAN|JAPANESE|CHINESE|Mandarin|Sichuan|LIMITED|BONUS|DOCU)\b"
+            r"Director'?s\.?Cut|KORSUB|BDRip|WEB|4K|Hi10p|AC3|BD|DOCU|DVD)\b",
+            re.IGNORECASE,
         )
-        cleaned = re.sub(r"\[.*?\]|\(.*?\)", " ", name)
-        cleaned = re.sub(noise_pattern, " ", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r"[-@][A-Za-z0-9_]+$", "", cleaned)
-        cleaned = re.sub(r"[._]+", " ", cleaned).strip()
+        text = re.sub(r"\[.*?\]|\(.*?\)", " ", cleaned_name)
+        text = re.sub(r"[._]+", " ", text)
 
         en_title = None
-        if year and year in cleaned:
-            candidate = cleaned.split(year)[0].strip()
-            en_words = re.findall(r"[A-Za-z0-9'\s]+", candidate)
-            if en_words:
-                en_title = " ".join("".join(en_words).split())
-        elif cleaned:
-            en_words = re.findall(r"[A-Za-z0-9'\s]+", cleaned)
-            if en_words:
-                en_title = " ".join("".join(en_words).split())
+        if year and year in text:
+            parts = text.split(year)
+            before = parts[0].strip()
+            after = parts[1].strip() if len(parts) > 1 else ""
+            if before:
+                cand = noise_pattern.sub(" ", before)
+                cand = re.sub(r"[\u4e00-\u9fa5·：:]+", " ", cand)
+                cand = re.sub(r"[-@][A-Za-z0-9_]+$", "", cand)
+                if " - " in cand:
+                    after_dash = cand.split(" - ")[-1].strip()
+                    if after_dash and re.search(r"[A-Za-z]", after_dash):
+                        cand = after_dash
+                # 剔除末尾语种标识（如 JAPANESE, KOREAN 等）
+                cand = re.sub(r"\b(JAPANESE|KOREAN|GERMAN|FRENCH|ITALIAN|RUSSIAN|CHINESE)\b", " ", cand, flags=re.I)
+                words = " ".join(cand.split())
+                if words and (re.search(r"[A-Za-z]", words) or (words.isdigit() and words != year)):
+                    en_title = words
+            elif after:
+                cand = noise_pattern.sub(" ", after)
+                cand = re.sub(r"[\u4e00-\u9fa5·：:]+", " ", cand)
+                cand = re.sub(r"[-@][A-Za-z0-9_]+$", "", cand)
+                cand = re.sub(r"\b(JAPANESE|KOREAN|GERMAN|FRENCH|ITALIAN|RUSSIAN|CHINESE)\b", " ", cand, flags=re.I)
+                words = " ".join(cand.split())
+                if words and (re.search(r"[A-Za-z]", words) or (words.isdigit() and words != year)):
+                    en_title = words
+
+        if not en_title:
+            noise_m = noise_pattern.search(text)
+            cand = text[:noise_m.start()] if noise_m else text
+            cand = re.sub(r"[\u4e00-\u9fa5·：:]+", " ", cand)
+            cand = re.sub(r"[-@][A-Za-z0-9_]+$", "", cand)
+            if " - " in cand:
+                after_dash = cand.split(" - ")[-1].strip()
+                if after_dash and re.search(r"[A-Za-z]", after_dash):
+                    cand = after_dash
+            cand = re.sub(r"\b(JAPANESE|KOREAN|GERMAN|FRENCH|ITALIAN|RUSSIAN|CHINESE)\b", " ", cand, flags=re.I)
+            words = " ".join(cand.split())
+            if words and (re.search(r"[A-Za-z]", words) or words.isdigit()):
+                en_title = words
 
         return {
             "imdb_id": imdb_id,
@@ -182,10 +248,10 @@ class MovieScraper:
         for t in trans_list:
             iso = t.get("iso_3166_1")
             data = t.get("data", {})
-            if iso == "CN" and data.get("title"):
-                zh_trans_title = data["title"]
-            elif iso == "US" and data.get("title"):
-                en_trans_title = data["title"]
+            if iso == "CN" and (data.get("title") or data.get("name")):
+                zh_trans_title = data.get("title") or data.get("name")
+            elif iso in ("US", "GB") and (data.get("title") or data.get("name")):
+                en_trans_title = data.get("title") or data.get("name")
 
         # 决定中文名
         zh_title = (
@@ -270,7 +336,7 @@ class MovieScraper:
         encoded_q = urllib.parse.quote(title)
         url = f"https://api.themoviedb.org/3/search/movie?query={encoded_q}&language=zh-CN"
         if year:
-            url += f"&year={year}"
+            url += f"&primary_release_year={year}"
 
         try:
             data = self._http_get(url)
@@ -296,6 +362,10 @@ class MovieScraper:
             try:
                 tv_data = self._http_get(tv_url)
                 results = tv_data.get("results", [])
+                if not results and year:
+                    tv_url_no_yr = f"https://api.themoviedb.org/3/search/tv?query={encoded_q}&language=zh-CN"
+                    tv_data = self._http_get(tv_url_no_yr)
+                    results = tv_data.get("results", [])
                 if results:
                     media_type = "tv"
             except Exception:
@@ -304,13 +374,17 @@ class MovieScraper:
         if not results:
             return None
 
-        # 核心优化：完全匹配标题优先，其次按 vote_count 与 popularity 综合排序，避免误选冷门同名纪录片或包含该词的其他大片
-        def rank_key(item_dict: dict[str, Any]) -> tuple[int, int, float]:
-            t = (item_dict.get("title") or "").strip().lower()
-            ot = (item_dict.get("original_title") or "").strip().lower()
+        # 核心优化：年份匹配优先，有效投票数优先，完全匹配标题优先，其次按 vote_count 与 popularity 综合排序
+        def rank_key(item_dict: dict[str, Any]) -> tuple[int, int, int, int, float]:
+            t = (item_dict.get("title") or item_dict.get("name") or "").strip().lower()
+            ot = (item_dict.get("original_title") or item_dict.get("original_name") or "").strip().lower()
             q = title.strip().lower()
             is_exact = 1 if (t == q or ot == q) else 0
-            return (is_exact, item_dict.get("vote_count", 0), item_dict.get("popularity", 0.0))
+            rel_year = (item_dict.get("release_date") or item_dict.get("first_air_date") or "")[:4]
+            year_matches = 1 if (year and rel_year == str(year)) else 0
+            votes = item_dict.get("vote_count", 0)
+            has_votes = 1 if votes >= 5 else 0
+            return (year_matches, has_votes, is_exact, votes, item_dict.get("popularity", 0.0))
 
         sorted_results = sorted(results, key=rank_key, reverse=True)
         best_item = sorted_results[0]
