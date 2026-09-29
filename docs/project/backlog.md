@@ -2,14 +2,18 @@
 
 ## 进行中
 
-- [ ] 电影元数据与封面海报统一抓取：针对已完成方案 A 规范化更名的全部电影目录统一抓取并生成 `movie.nfo` 与 `poster.jpg`
+- [ ] 项目全面重新定位与品牌重命名：重命名为百度网盘专业 CLI 工具（确定名称、更新 pyproject.toml、CLI 命令别名、文档与代码引用）
 
 ## 计划中
 
-
+- [ ] 第三阶段：电影元数据与封面海报全量自动化生成与上传 (`meta` 子系统)
+  - [ ] `bd-net-disc-mgr meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
+  - [ ] `bd-net-disc-mgr meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
+  - [ ] 支持断点续传、已存在跳过（幂等性）与 `--dry-run` 预览模式
+  - [ ] 对 `/影视/电影/watched`（266部）与 `/影视/电影/unwatched`（36部）共 302 部电影全量批处理
 - [ ] 递归遍历网盘文件树（`MultimediafileApi.xpanfilelistall`）并落地本地索引
 - [ ] 文件搜索 CLI（`FileinfoApi.xpanfilesearch`）
-- [ ] 文件上传（预上传 → 分片 → 创建，`FileuploadApi`）
+- [ ] 大文件分片上传与断点续传（预上传 → 分片 → 创建，`FileuploadApi`）
 - [ ] 网盘容量与用户信息查询（`UserinfoApi`）
 - [ ] 文档治理体系落地：tutorials / how-to / explanation 象限按需填充
 
