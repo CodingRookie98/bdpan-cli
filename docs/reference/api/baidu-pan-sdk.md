@@ -2,9 +2,9 @@
 
 > **文档控制信息**
 > - **文档标识**: REF-BAIDU-PAN-SDK-2026
-> - **当前版本**: V1.0.0
+> - **当前版本**: V1.3.0
 > - **文档状态**: Active
-> - **生效日期**: 2026-09-29
+> - **生效日期**: 2026-09-30
 > - **文档所有者**: AI Agent / 工程师
 
 ---
@@ -13,6 +13,7 @@
 
 | 版本号 | 修订日期 | 修订人 | 审核人 | 修订描述 |
 | :--- | :--- | :--- | :--- | :--- |
+| **V1.3.0** | 2026-09-30 | AI Agent | 架构师 | 故障注入实测：filemanager 四原语部分失败信封（顶层 errno=12 + info[].errno 逐项标注）、filemanagerdelete 规格与缺源幂等语义；修正 xpan 错误信封示例 |
 | **V1.2.0** | 2026-09-30 | AI Agent | 架构师 | 实测核实并记录 filemanagercopy 规格与 xpanfilelist 不存在路径行为（返回空列表） |
 | **V1.1.0** | 2026-09-29 | AI Agent | 架构师 | 实测核实并记录 filemanagerrename、filemanagermove 与 xpanfilecreate(mkdir) 规格 |
 | **V1.0.0** | 2026-09-29 | AI Agent | 架构师 | 依据官方 SDK 文档与 vendored 源码建立接口参考基线 |
@@ -110,6 +111,10 @@ SDK 覆盖 6 个 API 类、19 个接口，统一携带固定查询参数 `openap
 
 已知事实（实测核实）：`filemanagercopy` 参数 `_async=0`，`filelist` 为 JSON 字符串 `[{"path": "/src/path", "dest": "/dest/dir", "newname": "name"}]`（与 move 同构）；支持目录复制（服务端递归处理）。支持批量（建议每批 ≤50 项以防超时）。
 
+已知事实（实测核实）：`filemanagerdelete` 参数 `_async=0`，`filelist` 为 JSON 字符串（**路径数组**，如 `["/path/a", "/path/b"]`，注意与 rename/move/copy 的对象数组不同构）；成功返回 `{"errno": 0, "info": [{"errno": 0, "path": "..."}]}`。对**不存在的路径**服务端不报错，返回 `errno=0` 且 `info[].errno=0`（幂等成功语义）。
+
+已知事实（实测核实，故障注入）：filemanager 四原语（copy/move/rename/delete）的**部分失败信封**为顶层 `errno=12`，`info[]` 逐项标注成败——混合批次（有效项 + 缺源项）实测返回 `{"errno": 12, "info": [{"errno": 0, "path": "...", "to_path": "..."}, {"errno": -9, "path": "不存在的源"}], "newno": -9}`，且其中**有效项已实际生效**。`-9` 为文件/目录不存在。调用方除顶层 `errno` 外应逐项校验 `info[].errno`，并注意"顶层非零但部分项已生效"的补偿语义。
+
 已知事实（实测核实）：`xpanfilecreate` 用于创建目录时，参数为 `access_token`、`path`、`isdir=1`、`size=0`、`uploadid=""`、`block_list="[]"`、`rtype=1`；若目录已存在，API 返回 `{"errno": -8}`。
 
 已知事实（源码核实）：`oauth_token_device_code` 必填参数为 `client_id`、`scope`；响应模型 `OauthTokenDeviceCodeResponse` 字段为 `device_code`、`user_code`、`verification_url`、`qrcode_url`、`expires_in`、`interval`。`oauth_token_device_token` 必填参数为 `code`（即 device_code）、`client_id`、`client_secret`；响应字段为 `access_token`、`refresh_token`、`expires_in`、`session_key`、`session_secret`、`scope`。
@@ -130,7 +135,7 @@ OAuth 授权类接口失败返回：
 xpan 业务接口失败返回：
 
 ```json
-{"errno": 0, "errmsg": "..."}
+{"errno": 12, "errmsg": "..."}
 ```
 
-`errno=0` 表示成功。常见非零值：`2`（权限不足）、`-6`（身份验证失败，access_token 无效）、`111`（access_token 过期）。完整错误码见官方文档错误码页面（https://pan.baidu.com/union/doc/）。
+`errno=0` 表示成功。常见非零值：`12`（filemanager 批量操作部分失败，逐项结果见 `info[].errno`）、`-9`（文件或目录不存在）、`2`（权限不足）、`-6`（身份验证失败，access_token 无效）、`111`（access_token 过期）。完整错误码见官方文档错误码页面（https://pan.baidu.com/union/doc/）。

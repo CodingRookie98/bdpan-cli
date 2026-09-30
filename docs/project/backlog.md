@@ -1,7 +1,7 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.1.0
+> - **文档版本**: V1.2.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-09-30
 > - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
@@ -12,10 +12,6 @@
 
 ## 计划中
 
-- [ ] BK-0013 (P4 审查建议) `_resolve_dest` 探测失败 fallback 分支补 `logger.warning`（cli.py:89-90）
-- [ ] BK-0014 (P4 审查建议) `rm` 交互确认补 EOFError/KeyboardInterrupt 守卫（非交互 stdin 下避免裸 traceback）
-- [ ] BK-0015 (P4 审查建议·立项) filemanager 四原语（copy/move/rename/delete）逐项 `info[].errno` 校验统一加固——待真网盘故障注入取证后实施
-- [ ] BK-0016 (P4 审查建议) `FileManager.copy` 错误文案去掉"批量复制批次 1"字样
 - [ ] BK-0017 第三阶段：电影元数据与封面海报全量自动化生成与上传 (`meta` 子系统)
   - [ ] `bdpan meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
   - [ ] `bdpan meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
@@ -30,6 +26,10 @@
 
 ## 已关闭
 
+- [x] BK-0016 (P4 审查建议) `FileManager.copy` 错误文案去掉"批量复制批次 1"字样（copy 改走共享 `_copy_request` 单项语境文案通道，真批量场景既有文案逐字保留，2026-09-30）
+- [x] BK-0015 (P4 审查建议·立项) filemanager 四原语（copy/move/rename/delete）逐项 `info[].errno` 校验统一加固（新增 `_validate_filemanager_result` 统一助手；真网盘沙箱故障注入取证：部分失败信封顶层 `errno=12` + `info[].errno=-9`，混合批有效项实际生效，delete 缺源幂等返回 0，2026-09-30）
+- [x] BK-0014 (P4 审查建议) `rm` 交互确认补 EOFError/KeyboardInterrupt 守卫（非交互 stdin / Ctrl-C 视作取消，退出 0 不删除，2026-09-30）
+- [x] BK-0013 (P4 审查建议) `_resolve_dest` 探测失败 fallback 分支补 `logger.warning`（2026-09-30）
 - [x] BK-0012 文件操作命令补齐：新增 `cp`/`rm`/`rename`，修复 `mv` 移动改名语义（`FileManager.copy`/`batch_copy`，真网盘沙箱全链路实测通过，2026-09-30）
 - [x] BK-0011 项目全面重新定位与品牌重命名：重命名为 `bdpan-cli`，主命令 `bdpan`（完成代码包迁移、pyproject.toml、CLI 别名与全量测试，2026-09-29）
 - [x] BK-0010 媒体库终态拓扑规整（`unscraped` 电影并入 `watched`，`pending_triage` 更名为 `torrents`，全库 302 部电影 100% 达标，2026-09-29）
@@ -47,5 +47,6 @@
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V1.2.0 | 2026-09-30 | 关闭 BK-0013~BK-0016（file-ops P4 审查建议四项全部落地） |
 | V1.1.0 | 2026-09-30 | 全量条目迁移 BK-0001~BK-0023 编号，补控制头，接入 backlog-specification.md 规范 |
 | V1.0.0 | 2026-09-29 | 建立"进行中/计划中/已关闭"三区待办清单 |

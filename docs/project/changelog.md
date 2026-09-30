@@ -4,6 +4,7 @@
 
 ## 2026-09-30
 
+- **fix(cli/filemanager)**: 落地 file-ops P4 审查建议四项（BK-0013~BK-0016）。`_resolve_dest` 探测失败 fallback 补 `logger.warning`（BK-0013）；`rm` 交互确认补 `EOFError`/`KeyboardInterrupt` 守卫，非交互 stdin / Ctrl-C 视作取消退出 0（BK-0014）；`FileManager` 四原语新增 `_validate_filemanager_result` 统一逐项 `info[].errno` 校验，防顶层 0 部分失败漏报（BK-0015）；`copy` 错误文案改单项语境，去"批量复制批次 1"字样（BK-0016）。真网盘沙箱故障注入取证：部分失败信封顶层 `errno=12` + `info[].errno=-9`（混合批中有效项实际生效）、delete 缺源幂等返回 0。单元测试 42→52 全绿，测后沙箱零残留。
 - **feat(cli)**: 补齐文件操作命令 `cp` / `rm` / `rename`，并修复 `mv` 无法移动改名的语义缺陷。`FileManager` 新增 `copy`/`batch_copy` 原语（复用 SDK `filemanagercopy`，50 项/批防超时）；`cp`/`mv` 目标双语义：已存在目录（或 `/` 结尾）→ 入内保名，否则按 `目标目录/新名` 改名；`rm` 支持多路径与默认交互确认（`-y` 跳过）。实测发现并修复 `xpanfilelist` 对不存在路径返回空列表导致的目标误判缺陷（改为父目录条目 `path`/`isdir` 精确匹配）。单元测试 28→42 全绿；真网盘沙箱 `/bdpan-cli-devtest/` 全链路实测（mkdir/cp/rename/mv/rm）通过，逐步 `ls` 对账严格守恒，测后零残留。
 
 ## 2026-09-29
