@@ -97,3 +97,45 @@ def test_cli_cp_root_level_rename(capsys):
         assert exit_code == 0
         # 根层级目标：dirname 为 /
         mock_mgr.copy.assert_called_once_with("/src/movie", "/", "top-copy")
+
+
+def test_cli_rm_yes_flag(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["rm", "-y", "/a", "/b"])
+        assert exit_code == 0
+        assert [c.args[0] for c in mock_mgr.delete.call_args_list] == ["/a", "/b"]
+
+
+def test_cli_rm_confirm_yes(capsys, monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["rm", "/del-target"])
+        assert exit_code == 0
+        mock_mgr.delete.assert_called_once_with("/del-target")
+
+
+def test_cli_rm_confirm_abort(capsys, monkeypatch):
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["rm", "/del-target"])
+        assert exit_code == 0
+        mock_mgr.delete.assert_not_called()
+
+
+def test_cli_rm_delete_failure(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.delete.side_effect = FileManagerError("删除失败")
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["rm", "-y", "/broken"])
+        assert exit_code == 1

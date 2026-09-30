@@ -107,6 +107,28 @@ def cmd_mv(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rm(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    targets = args.paths
+    print("⚠️  将从网盘删除以下条目（服务端移入回收站）:")
+    for p in targets:
+        print(f"  - {p}")
+    if not args.yes:
+        answer = input(f"确认删除 {len(targets)} 项? [y/N]: ").strip().lower()
+        if answer != "y":
+            print("已取消，未做任何变更。")
+            return 0
+    failed = 0
+    for p in targets:
+        try:
+            mgr.delete(p)
+            print(f"✅ 已删除: {p}")
+        except FileManagerError as e:
+            print(f"❌ 删除失败: {p} ({e})")
+            failed += 1
+    return 1 if failed else 0
+
+
 def cmd_scrape_preview(args: argparse.Namespace) -> int:
     target_dir = args.dir
     output_file = args.output
@@ -207,6 +229,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_cp.add_argument("src", help="源文件或目录路径")
     p_cp.add_argument("dest", help="目标目录路径，或 目标目录/新名")
     p_cp.set_defaults(func=cmd_cp)
+
+    # 3.2 rm
+    p_rm = subparsers.add_parser(
+        "rm",
+        help="删除网盘文件或目录（默认交互确认，-y 跳过；服务端移入回收站）",
+    )
+    p_rm.add_argument("paths", nargs="+", help="待删除的一个或多个路径")
+    p_rm.add_argument("-y", "--yes", action="store_true", help="跳过确认直接删除")
+    p_rm.set_defaults(func=cmd_rm)
 
     # 4. scrape
     p_scrape = subparsers.add_parser("scrape", help="媒体库电影刮削与整理系统")
