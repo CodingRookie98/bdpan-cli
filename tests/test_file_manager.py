@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from bdpan_cli.file_manager import FileManager, FileManagerError
+from openapi_client.rest import ApiException
 
 
 def test_list_dir_pagination():
@@ -84,6 +85,25 @@ def test_rename_error():
         mgr.rename("/test/old", "new")
 
 
+def test_rename_partial_item_failure():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    # 顶层 errno=0 但 info[].errno != 0 → 逐项校验兜底报错
+    mgr._filemanager_api.filemanagerrename.return_value = {
+        "errno": 0,
+        "info": [{"errno": 0, "path": "/a", "to_path": "/b"}],
+    }
+    assert mgr.rename("/a", "b").get("errno") == 0
+
+    mgr._filemanager_api.filemanagerrename.return_value = {
+        "errno": 0,
+        "info": [{"errno": -6, "path": "/a", "to_path": "/b"}],
+    }
+    with pytest.raises(FileManagerError, match="重命名返回错误 \\[/a -> b\\]: 第 1 项失败 errno=-6"):
+        mgr.rename("/a", "b")
+
+
 def test_batch_move_batches():
     mock_client = MagicMock()
     mgr = FileManager("fake-token", mock_client)
@@ -108,6 +128,23 @@ def test_batch_move_batches():
     assert len(third_call_filelist) == 5
 
 
+def test_batch_move_partial_item_failure():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    # 批内 2 项，第 2 项服务端失败但顶层 errno=0 → 逐项校验兜底
+    mgr._filemanager_api.filemanagermove.return_value = {
+        "errno": 0,
+        "info": [
+            {"errno": 0, "from": "/src/a", "to": "/dest/a"},
+            {"errno": 12, "from": "/src/b", "to": "/dest/b"},
+        ],
+    }
+
+    with pytest.raises(FileManagerError, match="批量移动批次 1 返回错误: 第 2 项失败 errno=12"):
+        mgr.batch_move([("/src/a", "/dest", "a"), ("/src/b", "/dest", "b")])
+
+
 def test_copy_success():
     mock_client = MagicMock()
     mgr = FileManager("fake-token", mock_client)
@@ -124,14 +161,53 @@ def test_copy_success():
     assert payload == [{"path": "/src/movie", "dest": "/dst", "newname": "movie"}]
 
 
-def test_copy_error():
+def test_copy_error_single_item_wording():
     mock_client = MagicMock()
     mgr = FileManager("fake-token", mock_client)
     mgr._filemanager_api = MagicMock()
     mgr._filemanager_api.filemanagercopy.return_value = {"errno": 12, "errmsg": "cannot copy"}
 
-    # copy 复用 batch_copy 通道，错误经批量路径抛出
+    # 单项复制的错误文案不携带"批量复制批次"字样
+    with pytest.raises(FileManagerError) as exc_info:
+        mgr.copy("/src/movie", "/dst", "movie")
+    assert "复制返回错误 [/src/movie -> /dst/movie]" in str(exc_info.value)
+    assert "批量复制" not in str(exc_info.value)
+
+
+def test_copy_api_error_single_item_wording():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagercopy.side_effect = ApiException(status=403, reason="Forbidden")
+
+    with pytest.raises(FileManagerError) as exc_info:
+        mgr.copy("/src/movie", "/dst", "movie")
+    assert "复制 [/src/movie -> /dst/movie]失败: 403" in str(exc_info.value)
+    assert "批量复制" not in str(exc_info.value)
+
+
+def test_batch_copy_error_keeps_batch_wording():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagercopy.return_value = {"errno": 12, "errmsg": "cannot copy"}
+
+    # 真批量场景保留"批量复制批次 N"文案
     with pytest.raises(FileManagerError, match="批量复制批次 1 返回错误"):
+        mgr.batch_copy([("/src/movie", "/dst", "movie")])
+
+
+def test_copy_partial_item_failure():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    # 顶层 errno=0 但条目失败 → 必须报错，不能漏报
+    mgr._filemanager_api.filemanagercopy.return_value = {
+        "errno": 0,
+        "info": [{"errno": 12, "from": "/src/movie", "to": "/dst/movie"}],
+    }
+
+    with pytest.raises(FileManagerError, match="第 1 项失败 errno=12"):
         mgr.copy("/src/movie", "/dst", "movie")
 
 
@@ -180,4 +256,29 @@ def test_delete_error():
 
     with pytest.raises(FileManagerError, match="删除返回错误"):
         mgr.delete("/test/path")
+
+
+def test_delete_partial_item_failure():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    # 顶层 errno=0 但 info[].errno != 0 → 逐项校验兜底报错
+    mgr._filemanager_api.filemanagerdelete.return_value = {
+        "errno": 0,
+        "info": [{"errno": -9, "path": "/test/path"}],
+    }
+
+    with pytest.raises(FileManagerError, match="删除返回错误 \\[/test/path\\]: 第 1 项失败 errno=-9"):
+        mgr.delete("/test/path")
+
+
+def test_delete_success_without_info():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    # 无 info 字段的纯顶层成功响应应正常通过
+    mgr._filemanager_api.filemanagerdelete.return_value = {"errno": 0, "request_id": 123}
+
+    res = mgr.delete("/test/path")
+    assert res.get("errno") == 0
 

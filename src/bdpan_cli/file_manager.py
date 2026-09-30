@@ -19,6 +19,24 @@ class FileManagerError(RuntimeError):
     """文件管理异常基类。"""
 
 
+def _validate_filemanager_result(res: Any, prefix: str) -> dict[str, Any]:
+    """统一校验 filemanager 四原语（copy/move/rename/delete）的响应。
+
+    响应形如 ``{"errno": 0, "info": [{"errno": 0, ...}, ...]}``，批量场景下
+    存在顶层 errno=0 但个别条目 info[].errno != 0 的部分失败形态，仅校验
+    顶层会漏报，故逐项复核；任一非零即抛 FileManagerError。部分响应可能
+    无 info 字段或缺省条目 errno，视作通过以免对未记载形态误报。
+    """
+    if not isinstance(res, dict) or res.get("errno") != 0:
+        raise FileManagerError(f"{prefix}: {res}")
+    info = res.get("info")
+    if isinstance(info, list):
+        for idx, item in enumerate(info, 1):
+            if isinstance(item, dict) and item.get("errno") not in (0, None):
+                raise FileManagerError(f"{prefix}: 第 {idx} 项失败 errno={item['errno']} ({item})")
+    return res
+
+
 class FileManager:
     """网盘文件与目录管理封装。"""
 
@@ -87,9 +105,7 @@ class FileManager:
         except ApiException as e:
             raise FileManagerError(f"重命名失败 [{path} -> {new_name}]: {e.status} {e.body}") from e
 
-        if not isinstance(res, dict) or res.get("errno") != 0:
-            raise FileManagerError(f"重命名返回错误 [{path} -> {new_name}]: {res}")
-        return res
+        return _validate_filemanager_result(res, f"重命名返回错误 [{path} -> {new_name}]")
 
     def batch_rename(
         self,
@@ -119,8 +135,7 @@ class FileManager:
             except ApiException as e:
                 raise FileManagerError(f"批量重命名批次 {i // batch_size + 1} 失败: {e.status} {e.body}") from e
 
-            if not isinstance(res, dict) or res.get("errno") != 0:
-                raise FileManagerError(f"批量重命名批次 {i // batch_size + 1} 返回错误: {res}")
+            _validate_filemanager_result(res, f"批量重命名批次 {i // batch_size + 1} 返回错误")
             results.append(res)
         return results
 
@@ -156,14 +171,22 @@ class FileManager:
             except ApiException as e:
                 raise FileManagerError(f"批量移动批次 {i // batch_size + 1} 失败: {e.status} {e.body}") from e
 
-            if not isinstance(res, dict) or res.get("errno") != 0:
-                raise FileManagerError(f"批量移动批次 {i // batch_size + 1} 返回错误: {res}")
+            _validate_filemanager_result(res, f"批量移动批次 {i // batch_size + 1} 返回错误")
             results.append(res)
         return results
 
     def copy(self, path: str, dest_dir: str, new_name: str) -> dict[str, Any]:
-        """复制单个文件或目录到目标目录。"""
-        return self.batch_copy([(path, dest_dir, new_name)])[0]
+        """复制单个文件或目录到目标目录。
+
+        与 batch_copy 共用同一请求与校验通道，但不经批量入口，错误文案
+        按单项语境表述（不出现"批量复制批次 N"字样）。
+        """
+        payload = [{"path": path, "dest": dest_dir, "newname": new_name}]
+        return self._copy_request(
+            payload,
+            api_ctx=f"复制 [{path} -> {dest_dir}/{new_name}]",
+            err_prefix=f"复制返回错误 [{path} -> {dest_dir}/{new_name}]",
+        )
 
     def batch_copy(
         self,
@@ -186,20 +209,36 @@ class FileManager:
                 {"path": src, "dest": dest, "newname": name}
                 for src, dest, name in chunk
             ]
-            filelist = json.dumps(payload, ensure_ascii=False)
-            try:
-                res = self._filemanager_api.filemanagercopy(
-                    access_token=self.access_token,
-                    _async=0,
-                    filelist=filelist,
-                )
-            except ApiException as e:
-                raise FileManagerError(f"批量复制批次 {i // batch_size + 1} 失败: {e.status} {e.body}") from e
-
-            if not isinstance(res, dict) or res.get("errno") != 0:
-                raise FileManagerError(f"批量复制批次 {i // batch_size + 1} 返回错误: {res}")
+            res = self._copy_request(
+                payload,
+                api_ctx=f"批量复制批次 {i // batch_size + 1}",
+                err_prefix=f"批量复制批次 {i // batch_size + 1} 返回错误",
+            )
             results.append(res)
         return results
+
+    def _copy_request(
+        self,
+        payload: list[dict[str, str]],
+        api_ctx: str,
+        err_prefix: str,
+    ) -> dict[str, Any]:
+        """执行单次 filemanagercopy 请求并统一校验。
+
+        api_ctx 用于 ApiException 文案（"…失败"），err_prefix 用于
+        响应校验文案（"…返回错误"），二者分离以保持既有文案逐字不变。
+        """
+        filelist = json.dumps(payload, ensure_ascii=False)
+        try:
+            res = self._filemanager_api.filemanagercopy(
+                access_token=self.access_token,
+                _async=0,
+                filelist=filelist,
+            )
+        except ApiException as e:
+            raise FileManagerError(f"{api_ctx}失败: {e.status} {e.body}") from e
+
+        return _validate_filemanager_result(res, err_prefix)
 
     def delete(self, path: str) -> dict[str, Any]:
         """删除单个文件或目录。"""
@@ -213,7 +252,5 @@ class FileManager:
         except ApiException as e:
             raise FileManagerError(f"删除失败 [{path}]: {e.status} {e.body}") from e
 
-        if not isinstance(res, dict) or res.get("errno") != 0:
-            raise FileManagerError(f"删除返回错误 [{path}]: {res}")
-        return res
+        return _validate_filemanager_result(res, f"删除返回错误 [{path}]")
 
