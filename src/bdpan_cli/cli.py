@@ -87,6 +87,10 @@ def _resolve_dest(mgr: FileManager, src: str, dest: str) -> tuple[str, str]:
     try:
         siblings = mgr.list_dir(dest_dir)
     except FileManagerError:
+        logger.warning(
+            "探测 dest 父目录失败 [%s 不可读]，按「目标目录/新名」改名语义处理，真实错误由后续 copy/move 报出",
+            dest_dir,
+        )
         return dest_dir, dest_name
     dest_is_dir = any(
         e.get("path") == dest and e.get("isdir") == 1 for e in siblings
@@ -120,7 +124,12 @@ def cmd_rm(args: argparse.Namespace) -> int:
     for p in targets:
         print(f"  - {p}")
     if not args.yes:
-        answer = input(f"确认删除 {len(targets)} 项? [y/N]: ").strip().lower()
+        try:
+            answer = input(f"确认删除 {len(targets)} 项? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            # 非交互 stdin 或 Ctrl-C 视作取消，与主动回答 N 同语义
+            print("\n已取消，未做任何变更。")
+            return 0
         if answer != "y":
             print("已取消，未做任何变更。")
             return 0

@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock, patch
+import logging
 import pytest
 
-from bdpan_cli.cli import build_parser, main
+from bdpan_cli.cli import build_parser, main, _resolve_dest
 from bdpan_cli.file_manager import FileManagerError
 
 
@@ -102,6 +103,19 @@ def test_cli_cp_root_level_rename(capsys):
         mock_mgr.copy.assert_called_once_with("/src/movie", "/", "top-copy")
 
 
+def test_cli_cp_dest_parent_unreadable_falls_back_with_warning(caplog):
+    mock_mgr = MagicMock()
+    # 父目录不可读 → 改名语义 fallback，且补 WARNING 日志
+    mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败 [/dst]: 31066 body")
+
+    with caplog.at_level(logging.WARNING, logger="bdpan_cli.cli"):
+        dest_dir, dest_name = _resolve_dest(mock_mgr, "/src/movie", "/dst/new-name")
+
+    assert (dest_dir, dest_name) == ("/dst", "new-name")
+    assert any(r.levelno == logging.WARNING for r in caplog.records)
+    assert "/dst" in caplog.text
+
+
 def test_cli_rm_yes_flag(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
@@ -125,6 +139,22 @@ def test_cli_rm_confirm_yes(capsys, monkeypatch):
 
 def test_cli_rm_confirm_abort(capsys, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: "n")
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["rm", "/del-target"])
+        assert exit_code == 0
+        mock_mgr.delete.assert_not_called()
+
+
+@pytest.mark.parametrize("stdin_error", [EOFError, KeyboardInterrupt])
+def test_cli_rm_confirm_stdin_guard(capsys, monkeypatch, stdin_error):
+    # 非交互 stdin (EOF) 或 Ctrl-C 时不产生裸 traceback，视作取消
+    def _raise(_prompt):
+        raise stdin_error
+
+    monkeypatch.setattr("builtins.input", _raise)
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
         mock_mgr_getter.return_value = mock_mgr
