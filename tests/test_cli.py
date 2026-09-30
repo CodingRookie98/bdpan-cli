@@ -45,6 +45,8 @@ def test_cli_mkdir(capsys):
 def test_cli_mv(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
+        # dest 为已存在目录（父目录列表含 dest 且 isdir=1）→ 移入保名
+        mock_mgr.list_dir.return_value = [{"path": "/影视/电影/dest", "isdir": 1}]
         mock_mgr_getter.return_value = mock_mgr
 
         exit_code = main(["mv", "/tmp/a.mkv", "/影视/电影/dest"])
@@ -55,7 +57,8 @@ def test_cli_mv(capsys):
 def test_cli_cp_into_existing_dir(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
-        mock_mgr.list_dir.return_value = []  # dest 是已存在的（空）目录
+        # 父目录列表中存在 dest 且为目录 → 复制入内
+        mock_mgr.list_dir.return_value = [{"path": "/dst-dir", "isdir": 1}]
         mock_mgr_getter.return_value = mock_mgr
 
         exit_code = main(["cp", "/src/movie", "/dst-dir"])
@@ -66,8 +69,8 @@ def test_cli_cp_into_existing_dir(capsys):
 def test_cli_cp_with_rename(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
-        # list_dir 失败 → dest 不是已存在目录，视为完整目标路径
-        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败")
+        # 父目录可读但列表中无 dest → dest 不存在，视为 目标目录/新名
+        mock_mgr.list_dir.return_value = []
         mock_mgr_getter.return_value = mock_mgr
 
         exit_code = main(["cp", "/src/movie", "/dst/new-name"])
@@ -90,7 +93,7 @@ def test_cli_cp_trailing_slash(capsys):
 def test_cli_cp_root_level_rename(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
-        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败")
+        mock_mgr.list_dir.return_value = []
         mock_mgr_getter.return_value = mock_mgr
 
         exit_code = main(["cp", "/src/movie", "/top-copy"])
@@ -154,8 +157,8 @@ def test_cli_rename(capsys):
 def test_cli_mv_move_and_rename(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()
-        # dest 非已存在目录 → 移动并改名
-        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败")
+        # 父目录可读但列表中无 dest → 移动并改名
+        mock_mgr.list_dir.return_value = []
         mock_mgr_getter.return_value = mock_mgr
 
         exit_code = main(["mv", "/a/b.txt", "/c/d.txt"])

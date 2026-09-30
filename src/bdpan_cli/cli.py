@@ -74,15 +74,24 @@ def _resolve_dest(mgr: FileManager, src: str, dest: str) -> tuple[str, str]:
 
     - dest 以 `/` 结尾，或 dest 是网盘上已存在的目录 → 复制/移入该目录并保持源名；
     - 否则将 dest 视为 `目标目录/新名`，实现复制/移动并改名。
+
+    存在性判定依赖 dest 父目录的条目列表（百度 xpanfilelist 对不存在路径
+    返回空列表而非报错，故不能直接 list dest）；父目录不可读时按改名语义
+    处理，由后续 copy/move 在服务端报出真实错误。
     """
     src_name = os.path.basename(src.rstrip("/"))
     if dest.endswith("/"):
         return dest.rstrip("/") or "/", src_name
+    dest_dir = os.path.dirname(dest) or "/"
+    dest_name = os.path.basename(dest)
     try:
-        mgr.list_dir(dest)
-        return dest, src_name
+        siblings = mgr.list_dir(dest_dir)
     except FileManagerError:
-        return os.path.dirname(dest) or "/", os.path.basename(dest)
+        return dest_dir, dest_name
+    dest_is_dir = any(
+        e.get("path") == dest and e.get("isdir") == 1 for e in siblings
+    )
+    return (dest, src_name) if dest_is_dir else (dest_dir, dest_name)
 
 
 def cmd_cp(args: argparse.Namespace) -> int:
