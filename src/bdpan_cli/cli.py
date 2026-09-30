@@ -97,11 +97,8 @@ def cmd_cp(args: argparse.Namespace) -> int:
 def cmd_mv(args: argparse.Namespace) -> int:
     mgr = _get_file_manager()
     src = args.src
-    dest = args.dest
-    # 如果 dest 是一个已存在的目录，则 new_name 保持与 src 同名
-    dest_name = os.path.basename(src)
-    dest_dir = dest
-    logger.info("正在移动: %s -> %s", src, dest_dir)
+    dest_dir, dest_name = _resolve_dest(mgr, src, args.dest)
+    logger.info("正在移动: %s -> %s/%s", src, dest_dir, dest_name)
     res = mgr.batch_move([(src, dest_dir, dest_name)])
     print(f"✅ 移动成功: {src} -> {dest_dir}/{dest_name}")
     return 0

@@ -149,3 +149,26 @@ def test_cli_rename(capsys):
         exit_code = main(["rename", "/movies/old-name", "new-name"])
         assert exit_code == 0
         mock_mgr.rename.assert_called_once_with("/movies/old-name", "new-name")
+
+
+def test_cli_mv_move_and_rename(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        # dest 非已存在目录 → 移动并改名
+        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败")
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["mv", "/a/b.txt", "/c/d.txt"])
+        assert exit_code == 0
+        mock_mgr.batch_move.assert_called_once_with([("/a/b.txt", "/c", "d.txt")])
+
+
+def test_cli_mv_trailing_slash(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["mv", "/a/b.txt", "/c/"])
+        assert exit_code == 0
+        mock_mgr.list_dir.assert_not_called()
+        mock_mgr.batch_move.assert_called_once_with([("/a/b.txt", "/c", "b.txt")])
