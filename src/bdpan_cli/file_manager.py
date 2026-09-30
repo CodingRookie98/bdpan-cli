@@ -161,6 +161,46 @@ class FileManager:
             results.append(res)
         return results
 
+    def copy(self, path: str, dest_dir: str, new_name: str) -> dict[str, Any]:
+        """复制单个文件或目录到目标目录。"""
+        return self.batch_copy([(path, dest_dir, new_name)])[0]
+
+    def batch_copy(
+        self,
+        items: list[tuple[str, str, str]],
+        batch_size: int = 50,
+    ) -> list[dict[str, Any]]:
+        """批量复制文件或目录。
+
+        Args:
+            items: 包含 (src_path, dest_dir, new_name) 的元组列表。
+            batch_size: 每批请求的最大数量（默认 50，避免接口超时或截断）。
+
+        Returns:
+            各批次成功结果列表。
+        """
+        results: list[dict[str, Any]] = []
+        for i in range(0, len(items), batch_size):
+            chunk = items[i : i + batch_size]
+            payload = [
+                {"path": src, "dest": dest, "newname": name}
+                for src, dest, name in chunk
+            ]
+            filelist = json.dumps(payload, ensure_ascii=False)
+            try:
+                res = self._filemanager_api.filemanagercopy(
+                    access_token=self.access_token,
+                    _async=0,
+                    filelist=filelist,
+                )
+            except ApiException as e:
+                raise FileManagerError(f"批量复制批次 {i // batch_size + 1} 失败: {e.status} {e.body}") from e
+
+            if not isinstance(res, dict) or res.get("errno") != 0:
+                raise FileManagerError(f"批量复制批次 {i // batch_size + 1} 返回错误: {res}")
+            results.append(res)
+        return results
+
     def delete(self, path: str) -> dict[str, Any]:
         """删除单个文件或目录。"""
         filelist = json.dumps([path], ensure_ascii=False)
