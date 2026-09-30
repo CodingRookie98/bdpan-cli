@@ -11,7 +11,7 @@ from typing import Any
 
 from bdpan_cli.auth import TokenManager
 from bdpan_cli.config import load_config
-from bdpan_cli.file_manager import FileManager
+from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
 from bdpan_cli.preview_scrape import generate_preview
 from bdpan_cli.apply_scrape_rename import apply_renames
@@ -66,6 +66,31 @@ def cmd_mkdir(args: argparse.Namespace) -> int:
     logger.info("正在创建目录: %s", path)
     res = mgr.mkdir(path)
     print(f"✅ 目录创建成功: {path}")
+    return 0
+
+
+def _resolve_dest(mgr: FileManager, src: str, dest: str) -> tuple[str, str]:
+    """解析目标语义 (cp/mv 共用)。
+
+    - dest 以 `/` 结尾，或 dest 是网盘上已存在的目录 → 复制/移入该目录并保持源名；
+    - 否则将 dest 视为 `目标目录/新名`，实现复制/移动并改名。
+    """
+    src_name = os.path.basename(src.rstrip("/"))
+    if dest.endswith("/"):
+        return dest.rstrip("/") or "/", src_name
+    try:
+        mgr.list_dir(dest)
+        return dest, src_name
+    except FileManagerError:
+        return os.path.dirname(dest) or "/", os.path.basename(dest)
+
+
+def cmd_cp(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    dest_dir, new_name = _resolve_dest(mgr, args.src, args.dest)
+    logger.info("正在复制: %s -> %s/%s", args.src, dest_dir, new_name)
+    mgr.copy(args.src, dest_dir, new_name)
+    print(f"✅ 复制成功: {args.src} -> {dest_dir}/{new_name}")
     return 0
 
 
@@ -173,6 +198,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_mv.add_argument("src", help="源文件路径")
     p_mv.add_argument("dest", help="目标目录路径")
     p_mv.set_defaults(func=cmd_mv)
+
+    # 3.1 cp
+    p_cp = subparsers.add_parser(
+        "cp",
+        help="复制网盘文件或目录（目标为已存在目录时复制入内，否则视为 目标目录/新名）",
+    )
+    p_cp.add_argument("src", help="源文件或目录路径")
+    p_cp.add_argument("dest", help="目标目录路径，或 目标目录/新名")
+    p_cp.set_defaults(func=cmd_cp)
 
     # 4. scrape
     p_scrape = subparsers.add_parser("scrape", help="媒体库电影刮削与整理系统")

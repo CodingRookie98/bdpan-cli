@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from bdpan_cli.cli import build_parser, main
+from bdpan_cli.file_manager import FileManagerError
 
 
 def test_cli_parser_help():
@@ -49,3 +50,50 @@ def test_cli_mv(capsys):
         exit_code = main(["mv", "/tmp/a.mkv", "/影视/电影/dest"])
         assert exit_code == 0
         mock_mgr.batch_move.assert_called_once_with([("/tmp/a.mkv", "/影视/电影/dest", "a.mkv")])
+
+
+def test_cli_cp_into_existing_dir(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = []  # dest 是已存在的（空）目录
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["cp", "/src/movie", "/dst-dir"])
+        assert exit_code == 0
+        mock_mgr.copy.assert_called_once_with("/src/movie", "/dst-dir", "movie")
+
+
+def test_cli_cp_with_rename(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        # list_dir 失败 → dest 不是已存在目录，视为完整目标路径
+        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败")
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["cp", "/src/movie", "/dst/new-name"])
+        assert exit_code == 0
+        mock_mgr.copy.assert_called_once_with("/src/movie", "/dst", "new-name")
+
+
+def test_cli_cp_trailing_slash(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["cp", "/src/movie", "/dst-dir/"])
+        assert exit_code == 0
+        # 尾斜杠直接视为目录语义，不发起 list_dir 探测
+        mock_mgr.list_dir.assert_not_called()
+        mock_mgr.copy.assert_called_once_with("/src/movie", "/dst-dir", "movie")
+
+
+def test_cli_cp_root_level_rename(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败")
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["cp", "/src/movie", "/top-copy"])
+        assert exit_code == 0
+        # 根层级目标：dirname 为 /
+        mock_mgr.copy.assert_called_once_with("/src/movie", "/", "top-copy")
