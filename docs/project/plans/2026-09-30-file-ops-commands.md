@@ -15,7 +15,7 @@
 > - **需求方**: 用户（项目所有者）
 > - **批准人 (User Nod)**: 用户 | **批准时间**: 2026-09-30（方案 A 最小补齐 + 当前会话内联执行）
 > - **批准基线**: main@`dbf193a`
-> - **状态**: 进行中
+> - **状态**: 已完成 [已完成]
 > - **隔离分支**: `feature/file-ops-commands`
 > - **技术调研备忘录**: [豁免: P0.5 豁免——直接复用 vendored SDK 既有 `filemanagercopy` 接口，无选型裁决需求]
 > - **临时 Scratchpad**: `.goal-loop/scratchpad.md`（已被 `.gitignore` 忽略）
@@ -136,13 +136,14 @@
   - **验收命令**: 见 Scratchpad 实测清单；全部 Exit Code 0 且对账守恒
 
 ### P4: 双轮对抗终审与再循环闭环硬门禁 (Dual-Round Review & Re-Loop Gate)
-- [ ] **Task P4.1**: 调用 `dual-round-review`：R1 红队子智能体（Diff 边界锁 `dbf193a..HEAD`）→ R2 元架构师审判；派发账本记录于 `.goal-loop/dispatch-ledger.md`
-  - **验收标准**: 独立子智能体终审裁决明细表
-- [ ] **Task P4.2**: （条件）阻断项修复与 Delta Re-Loop 再循环（迭代上限 5 次）
-- [ ] **Task P4.3**: Zero Blockers 裁决后合并 `feature/file-ops-commands` → `main`，删除临时分支
+- [x] **Task P4.1**: 调用 `dual-round-review`：R1 红队子智能体（Diff 边界锁 `dbf193a..b799fe3`）→ R2 元架构师审判；派发账本记录于 `.goal-loop/dispatch-ledger.md`
+  - **结果**: R1（agent_a12050fb）候选 P2×3/P3×11、无 P0/P1；R2（agent_f78549eb）逐条裁定：Blockers=0，Suggestion×4（RT-01/02/03/10 记入 backlog），驳回×10（含边界越界拦截 RT-11..14）
+  - **验收标准**: 独立子智能体终审裁决明细表 ✅（`.review-context/review-dbf193a.md`）
+- [x] **Task P4.2**: （条件）阻断项修复与 Delta Re-Loop 再循环 —— 未触发（Blockers=0，一次通过）
+- [x] **Task P4.3**: Zero Blockers 裁决后合并 `feature/file-ops-commands` → `main`，删除临时分支
 
 ### P5: 文档全向归档与联动升级
-- [ ] **Task P5.1**: 文档联动：README 命令清单、`docs/reference/api/baidu-pan-sdk.md` 第 3 节代码映射（新增 filemanagercopy 封装）、`docs/project/changelog.md` 追加、`docs/project/backlog.md` 对应项闭环、`docs/GOVERNANCE.md` 目录职责表补 `project/plans/`、`docs/index.md` 核对、重生成 `docs/llms.txt`、三门禁 Exit Code 0
+- [x] **Task P5.1**: 文档联动：README 命令清单、`docs/reference/api/baidu-pan-sdk.md` 第 3 节代码映射（新增 filemanagercopy 封装）、`docs/project/changelog.md` 追加、`docs/project/backlog.md` 对应项闭环、`docs/GOVERNANCE.md` 目录职责表补 `project/plans/`、`docs/index.md` 核对、重生成 `docs/llms.txt`、三门禁 Exit Code 0
 - [ ] **Task P5.2**: 本计划状态标记 `[已完成]`，沉淀最终执行总结
 - [ ] **Task P5.3**: (可选) 触发 `doc-governance` 技能工作流
 
@@ -157,4 +158,5 @@
 ---
 
 ## 5. 修订历史 (Revision History)
+- **[2026-09-30]**: 计划完成归档。P3 全任务（P3.0–P3.6 含 L2 实测缺陷修复 P3.2b）原子提交；L2 真网盘沙箱全链路通过并清理；P4 双轮审查一次通过（R2 终审 Blockers=0）；P5 文档四门禁全绿；合并回 main。
 - **[2026-09-30]**: 计划创建（P-1 方案 A 获 User Nod；P0.5/P0 豁免理由已记录）。

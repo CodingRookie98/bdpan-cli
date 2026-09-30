@@ -6,6 +6,10 @@
 
 ## 计划中
 
+- [ ] (P4 审查建议) `_resolve_dest` 探测失败 fallback 分支补 `logger.warning`（cli.py:89-90）
+- [ ] (P4 审查建议) `rm` 交互确认补 EOFError/KeyboardInterrupt 守卫（非交互 stdin 下避免裸 traceback）
+- [ ] (P4 审查建议·立项) filemanager 四原语（copy/move/rename/rename）逐项 `info[].errno` 校验统一加固——待真网盘故障注入取证后实施
+- [ ] (P4 审查建议) `FileManager.copy` 错误文案去掉"批量复制批次 1"字样
 - [ ] 第三阶段：电影元数据与封面海报全量自动化生成与上传 (`meta` 子系统)
   - [ ] `bdpan meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
   - [ ] `bdpan meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
