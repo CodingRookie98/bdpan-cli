@@ -11,7 +11,7 @@ from typing import Any
 
 from bdpan_cli.auth import TokenManager
 from bdpan_cli.config import load_config
-from bdpan_cli.file_manager import FileManager
+from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
 from bdpan_cli.preview_scrape import generate_preview
 from bdpan_cli.apply_scrape_rename import apply_renames
@@ -69,16 +69,77 @@ def cmd_mkdir(args: argparse.Namespace) -> int:
     return 0
 
 
+def _resolve_dest(mgr: FileManager, src: str, dest: str) -> tuple[str, str]:
+    """解析目标语义 (cp/mv 共用)。
+
+    - dest 以 `/` 结尾，或 dest 是网盘上已存在的目录 → 复制/移入该目录并保持源名；
+    - 否则将 dest 视为 `目标目录/新名`，实现复制/移动并改名。
+
+    存在性判定依赖 dest 父目录的条目列表（百度 xpanfilelist 对不存在路径
+    返回空列表而非报错，故不能直接 list dest）；父目录不可读时按改名语义
+    处理，由后续 copy/move 在服务端报出真实错误。
+    """
+    src_name = os.path.basename(src.rstrip("/"))
+    if dest.endswith("/"):
+        return dest.rstrip("/") or "/", src_name
+    dest_dir = os.path.dirname(dest) or "/"
+    dest_name = os.path.basename(dest)
+    try:
+        siblings = mgr.list_dir(dest_dir)
+    except FileManagerError:
+        return dest_dir, dest_name
+    dest_is_dir = any(
+        e.get("path") == dest and e.get("isdir") == 1 for e in siblings
+    )
+    return (dest, src_name) if dest_is_dir else (dest_dir, dest_name)
+
+
+def cmd_cp(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    dest_dir, new_name = _resolve_dest(mgr, args.src, args.dest)
+    logger.info("正在复制: %s -> %s/%s", args.src, dest_dir, new_name)
+    mgr.copy(args.src, dest_dir, new_name)
+    print(f"✅ 复制成功: {args.src} -> {dest_dir}/{new_name}")
+    return 0
+
+
 def cmd_mv(args: argparse.Namespace) -> int:
     mgr = _get_file_manager()
     src = args.src
-    dest = args.dest
-    # 如果 dest 是一个已存在的目录，则 new_name 保持与 src 同名
-    dest_name = os.path.basename(src)
-    dest_dir = dest
-    logger.info("正在移动: %s -> %s", src, dest_dir)
+    dest_dir, dest_name = _resolve_dest(mgr, src, args.dest)
+    logger.info("正在移动: %s -> %s/%s", src, dest_dir, dest_name)
     res = mgr.batch_move([(src, dest_dir, dest_name)])
     print(f"✅ 移动成功: {src} -> {dest_dir}/{dest_name}")
+    return 0
+
+
+def cmd_rm(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    targets = args.paths
+    print("⚠️  将从网盘删除以下条目（服务端移入回收站）:")
+    for p in targets:
+        print(f"  - {p}")
+    if not args.yes:
+        answer = input(f"确认删除 {len(targets)} 项? [y/N]: ").strip().lower()
+        if answer != "y":
+            print("已取消，未做任何变更。")
+            return 0
+    failed = 0
+    for p in targets:
+        try:
+            mgr.delete(p)
+            print(f"✅ 已删除: {p}")
+        except FileManagerError as e:
+            print(f"❌ 删除失败: {p} ({e})")
+            failed += 1
+    return 1 if failed else 0
+
+
+def cmd_rename(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    logger.info("正在重命名: %s -> %s", args.path, args.new_name)
+    mgr.rename(args.path, args.new_name)
+    print(f"✅ 重命名成功: {args.path} -> {args.new_name}")
     return 0
 
 
@@ -173,6 +234,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_mv.add_argument("src", help="源文件路径")
     p_mv.add_argument("dest", help="目标目录路径")
     p_mv.set_defaults(func=cmd_mv)
+
+    # 3.1 cp
+    p_cp = subparsers.add_parser(
+        "cp",
+        help="复制网盘文件或目录（目标为已存在目录时复制入内，否则视为 目标目录/新名）",
+    )
+    p_cp.add_argument("src", help="源文件或目录路径")
+    p_cp.add_argument("dest", help="目标目录路径，或 目标目录/新名")
+    p_cp.set_defaults(func=cmd_cp)
+
+    # 3.2 rm
+    p_rm = subparsers.add_parser(
+        "rm",
+        help="删除网盘文件或目录（默认交互确认，-y 跳过；服务端移入回收站）",
+    )
+    p_rm.add_argument("paths", nargs="+", help="待删除的一个或多个路径")
+    p_rm.add_argument("-y", "--yes", action="store_true", help="跳过确认直接删除")
+    p_rm.set_defaults(func=cmd_rm)
+
+    # 3.3 rename
+    p_rename = subparsers.add_parser("rename", help="原地重命名网盘文件或目录")
+    p_rename.add_argument("path", help="待重命名的文件或目录路径")
+    p_rename.add_argument("new_name", help="新名称（仅名称，不含目录）")
+    p_rename.set_defaults(func=cmd_rename)
 
     # 4. scrape
     p_scrape = subparsers.add_parser("scrape", help="媒体库电影刮削与整理系统")

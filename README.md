@@ -11,9 +11,14 @@ uv run bdpan --help
 # 常用命令
 uv run bdpan ls /影视/电影
 uv run bdpan mkdir /新目录
-uv run bdpan mv <源路径> <目标路径>
+uv run bdpan mv <源路径> <目标目录|目标目录/新名>
+uv run bdpan cp <源路径> <目标目录|目标目录/新名>
+uv run bdpan rename <路径> <新名称>
+uv run bdpan rm <路径>... [-y]
 uv run bdpan scrape foldering /影视/电影/unscraped
 ```
+
+> `mv` / `cp` 目标双语义：目标为已存在目录（或以 `/` 结尾）→ 移入/复制入内并保持原名；否则按 `目标目录/新名` 移动/复制并改名。`rm` 默认交互确认，`-y` 跳过；网盘删除由服务端移入回收站。
 
 ## 项目结构
 

@@ -108,6 +108,57 @@ def test_batch_move_batches():
     assert len(third_call_filelist) == 5
 
 
+def test_copy_success():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagercopy.return_value = {"errno": 0}
+
+    res = mgr.copy("/src/movie", "/dst", "movie")
+    assert res.get("errno") == 0
+    mgr._filemanager_api.filemanagercopy.assert_called_once()
+    call_args = mgr._filemanager_api.filemanagercopy.call_args[1]
+    assert call_args["access_token"] == "fake-token"
+    assert call_args["_async"] == 0
+    payload = json.loads(call_args["filelist"])
+    assert payload == [{"path": "/src/movie", "dest": "/dst", "newname": "movie"}]
+
+
+def test_copy_error():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagercopy.return_value = {"errno": 12, "errmsg": "cannot copy"}
+
+    # copy 复用 batch_copy 通道，错误经批量路径抛出
+    with pytest.raises(FileManagerError, match="批量复制批次 1 返回错误"):
+        mgr.copy("/src/movie", "/dst", "movie")
+
+
+def test_batch_copy_batches():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagercopy.return_value = {"errno": 0, "info": []}
+
+    items = [
+        (f"/src/file_{i}", "/dest", f"file_{i}")
+        for i in range(105)
+    ]
+    results = mgr.batch_copy(items, batch_size=50)
+
+    # 105 个元素，每次 50 个，应当调用 3 次
+    assert mgr._filemanager_api.filemanagercopy.call_count == 3
+    assert len(results) == 3
+
+    first_call_filelist = json.loads(mgr._filemanager_api.filemanagercopy.call_args_list[0][1]["filelist"])
+    assert len(first_call_filelist) == 50
+    assert first_call_filelist[0] == {"path": "/src/file_0", "dest": "/dest", "newname": "file_0"}
+
+    third_call_filelist = json.loads(mgr._filemanager_api.filemanagercopy.call_args_list[2][1]["filelist"])
+    assert len(third_call_filelist) == 5
+
+
 def test_delete():
     mock_client = MagicMock()
     mgr = FileManager("fake-token", mock_client)
