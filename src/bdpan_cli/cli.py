@@ -129,6 +129,14 @@ def cmd_rm(args: argparse.Namespace) -> int:
     return 1 if failed else 0
 
 
+def cmd_rename(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    logger.info("正在重命名: %s -> %s", args.path, args.new_name)
+    mgr.rename(args.path, args.new_name)
+    print(f"✅ 重命名成功: {args.path} -> {args.new_name}")
+    return 0
+
+
 def cmd_scrape_preview(args: argparse.Namespace) -> int:
     target_dir = args.dir
     output_file = args.output
@@ -238,6 +246,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_rm.add_argument("paths", nargs="+", help="待删除的一个或多个路径")
     p_rm.add_argument("-y", "--yes", action="store_true", help="跳过确认直接删除")
     p_rm.set_defaults(func=cmd_rm)
+
+    # 3.3 rename
+    p_rename = subparsers.add_parser("rename", help="原地重命名网盘文件或目录")
+    p_rename.add_argument("path", help="待重命名的文件或目录路径")
+    p_rename.add_argument("new_name", help="新名称（仅名称，不含目录）")
+    p_rename.set_defaults(func=cmd_rename)
 
     # 4. scrape
     p_scrape = subparsers.add_parser("scrape", help="媒体库电影刮削与整理系统")

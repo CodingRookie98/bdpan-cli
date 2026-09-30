@@ -139,3 +139,13 @@ def test_cli_rm_delete_failure(capsys):
 
         exit_code = main(["rm", "-y", "/broken"])
         assert exit_code == 1
+
+
+def test_cli_rename(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["rename", "/movies/old-name", "new-name"])
+        assert exit_code == 0
+        mock_mgr.rename.assert_called_once_with("/movies/old-name", "new-name")
