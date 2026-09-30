@@ -11,7 +11,7 @@
 | `tutorials/` | 学习导向教程 | 必须可跟做，从零到可运行 |
 | `how-to/` | 任务导向操作配方 | 面向已掌握基础的用户解决具体任务 |
 | `explanation/` | 架构剖析、ADR（MADR 3.0，Append-Only）、调研 | 回答 Why，不回答 How |
-| `project/` | changelog / backlog / roadmap | 工程演进记录闭环 |
+| `project/` | changelog / backlog / roadmap / plans | 工程演进记录闭环；plans 为 goal-loop 执行计划归档 |
 
 ## 联动规则（Sync Mode）
 

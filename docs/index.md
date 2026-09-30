@@ -20,6 +20,7 @@
 ## 工程演进入口
 
 - [changelog.md](./project/changelog.md) — 版本发布日志
+- [执行计划归档](./project/plans/2026-09-30-file-ops-commands.md) — goal-loop 执行计划（含测试策略裁定书）
 - [backlog.md](./project/backlog.md) — 待办事项与后续方向
 
 治理规程见 [GOVERNANCE.md](./GOVERNANCE.md)；机器可读地图见 [llms.txt](./llms.txt)。

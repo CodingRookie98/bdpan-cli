@@ -2,6 +2,10 @@
 
 > 记录每次交付的功能与文档演进。格式：日期 + 版本 + 变更摘要。
 
+## 2026-09-30
+
+- **feat(cli)**: 补齐文件操作命令 `cp` / `rm` / `rename`，并修复 `mv` 无法移动改名的语义缺陷。`FileManager` 新增 `copy`/`batch_copy` 原语（复用 SDK `filemanagercopy`，50 项/批防超时）；`cp`/`mv` 目标双语义：已存在目录（或 `/` 结尾）→ 入内保名，否则按 `目标目录/新名` 改名；`rm` 支持多路径与默认交互确认（`-y` 跳过）。实测发现并修复 `xpanfilelist` 对不存在路径返回空列表导致的目标误判缺陷（改为父目录条目 `path`/`isdir` 精确匹配）。单元测试 28→42 全绿；真网盘沙箱 `/bdpan-cli-devtest/` 全链路实测（mkdir/cp/rename/mv/rm）通过，逐步 `ls` 对账严格守恒，测后零残留。
+
 ## 2026-09-29
 
 - **chore(rebrand)**: 项目全面重新定位并更名为 `bdpan-cli`，提供终端命令 `bdpan`（保留 `bdpan-cli` 与 `bd-net-disc-mgr` 别名兼容）。Python 源码包重构为 `bdpan_cli`，更新内部导入路径、pyproject.toml 与相关文档引用。

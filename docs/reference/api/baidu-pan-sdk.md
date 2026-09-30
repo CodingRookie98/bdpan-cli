@@ -13,6 +13,7 @@
 
 | 版本号 | 修订日期 | 修订人 | 审核人 | 修订描述 |
 | :--- | :--- | :--- | :--- | :--- |
+| **V1.2.0** | 2026-09-30 | AI Agent | 架构师 | 实测核实并记录 filemanagercopy 规格与 xpanfilelist 不存在路径行为（返回空列表） |
 | **V1.1.0** | 2026-09-29 | AI Agent | 架构师 | 实测核实并记录 filemanagerrename、filemanagermove 与 xpanfilecreate(mkdir) 规格 |
 | **V1.0.0** | 2026-09-29 | AI Agent | 架构师 | 依据官方 SDK 文档与 vendored 源码建立接口参考基线 |
 
@@ -101,9 +102,13 @@ SDK 覆盖 6 个 API 类、19 个接口，统一携带固定查询参数 `openap
 
 已知事实（源码核实）：`xpanfilelist` 查询参数为 `access_token`（必填）、`dir`、`folder`、`start`（必须为 str 类型）、`limit`、`order`、`desc`、`web`、`showempty`；返回 dict，条目数组位于 `list` 键，条目字段含 `fs_id`、`path`、`server_filename`、`size`、`isdir`（1 为目录）。
 
+已知事实（实测核实）：`xpanfilelist` 对**不存在的目录**返回空 `list`（HTTP 200，无错误信封），不能以"是否报错"判定路径存在性；存在性判定应读取其父目录条目列表并按 `path`/`isdir` 精确匹配。
+
 已知事实（实测核实）：`filemanagerrename` 参数 `_async=0`，`filelist` 为 JSON 字符串 `[{"path": "/old/path", "newname": "new_name"}]`；成功返回 `{"errno": 0, "info": [{"errno": 0, "path": "...", "to_path": "..."}]}`。
 
 已知事实（实测核实）：`filemanagermove` 参数 `_async=0`，`filelist` 为 JSON 字符串 `[{"path": "/src/path", "dest": "/dest/dir", "newname": "name"}]`；成功返回 `{"errno": 0, "info": [...]}`。支持批量（建议每批 ≤50 项以防超时）。
+
+已知事实（实测核实）：`filemanagercopy` 参数 `_async=0`，`filelist` 为 JSON 字符串 `[{"path": "/src/path", "dest": "/dest/dir", "newname": "name"}]`（与 move 同构）；支持目录复制（服务端递归处理）。支持批量（建议每批 ≤50 项以防超时）。
 
 已知事实（实测核实）：`xpanfilecreate` 用于创建目录时，参数为 `access_token`、`path`、`isdir=1`、`size=0`、`uploadid=""`、`block_list="[]"`、`rtype=1`；若目录已存在，API 返回 `{"errno": -8}`。
 

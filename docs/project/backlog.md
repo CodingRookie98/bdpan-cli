@@ -11,6 +11,7 @@
   - [ ] `bdpan meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
   - [ ] 支持断点续传、已存在跳过（幂等性）与 `--dry-run` 预览模式
   - [ ] 对 `/影视/电影/watched`（266部）与 `/影视/电影/unwatched`（36部）共 302 部电影全量批处理
+- [ ] 文件操作命令多源批量参数（`cp`/`mv`/`rm` 批量语义，方案 B 残余项）
 - [ ] 递归遍历网盘文件树（`MultimediafileApi.xpanfilelistall`）并落地本地索引
 - [ ] 文件搜索 CLI（`FileinfoApi.xpanfilesearch`）
 - [ ] 大文件分片上传与断点续传（预上传 → 分片 → 创建，`FileuploadApi`）
@@ -19,6 +20,7 @@
 
 ## 已关闭
 
+- [x] 文件操作命令补齐：新增 `cp`/`rm`/`rename`，修复 `mv` 移动改名语义（`FileManager.copy`/`batch_copy`，真网盘沙箱全链路实测通过，2026-09-30）
 - [x] 项目全面重新定位与品牌重命名：重命名为 `bdpan-cli`，主命令 `bdpan`（完成代码包迁移、pyproject.toml、CLI 别名与全量测试，2026-09-29）
 - [x] 媒体库终态拓扑规整（`unscraped` 电影并入 `watched`，`pending_triage` 更名为 `torrents`，全库 302 部电影 100% 达标，2026-09-29）
 - [x] 工程化统一 CLI 工具构建与 `scrape foldering` 落地（实现统一子命令体系，完成 `/影视/电影/unscraped` 17个散落文件建目录与规整，2026-09-29）
