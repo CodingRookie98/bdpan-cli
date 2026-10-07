@@ -356,3 +356,64 @@ def test_cli_tree_partial_errors_exit_1(capsys):
         captured = capsys.readouterr()
         assert "1 个子目录读取失败" in captured.out
         assert "/t/locked" in captured.out
+
+
+def test_cli_cp_multi_source_into_existing_dir(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [{"path": "/dst", "isdir": 1}]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["cp", "/a/x", "/b/y", "/dst"])
+        assert exit_code == 0
+        mock_mgr.batch_copy.assert_called_once_with([("/a/x", "/dst", "x"), ("/b/y", "/dst", "y")])
+        mock_mgr.copy.assert_not_called()
+
+
+def test_cli_mv_multi_source_trailing_slash(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["mv", "/a/dir/", "/b/c.mkv", "/dst/"])
+        assert exit_code == 0
+        # 尾斜杠直接目录语义，不发起 list_dir 探测；源尾斜杠不污染名称
+        mock_mgr.list_dir.assert_not_called()
+        mock_mgr.batch_move.assert_called_once_with([("/a/dir/", "/dst", "dir"), ("/b/c.mkv", "/dst", "c.mkv")])
+
+
+def test_cli_mv_multi_source_dest_not_dir_exit_1(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        # 父目录可读但不含 dest → dest 非目录，多源拒绝执行
+        mock_mgr.list_dir.return_value = []
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["mv", "/a", "/b", "/not-a-dir"])
+        assert exit_code == 1
+        mock_mgr.batch_move.assert_not_called()
+        captured = capsys.readouterr()
+        assert "已存在目录" in captured.out
+
+
+def test_cli_cp_multi_source_dest_parent_unreadable_exit_1(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.side_effect = FileManagerError("读取目录失败 [/nope]: 31066")
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["cp", "/a", "/b", "/nope/dst"])
+        assert exit_code == 1
+        mock_mgr.batch_copy.assert_not_called()
+
+
+def test_cli_mv_single_source_unchanged(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [{"path": "/dst", "isdir": 1}]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["mv", "/a/x", "/dst"])
+        assert exit_code == 0
+        # 单源保持既有双语义：走 _resolve_dest + batch_move 单项通道
+        mock_mgr.batch_move.assert_called_once_with([("/a/x", "/dst", "x")])

@@ -106,22 +106,65 @@ def _resolve_dest(mgr: FileManager, src: str, dest: str) -> tuple[str, str]:
     return (dest, src_name) if dest_is_dir else (dest_dir, dest_name)
 
 
+def _require_dest_dir(mgr: FileManager, dest: str) -> str:
+    """多源批量目标必须是目录语义。
+
+    dest 以 / 结尾直接放行；否则探测父目录确认 dest 为已存在目录。
+    不满足时抛 FileManagerError（调用方转译为退出码 1）。
+    """
+    if dest.endswith("/"):
+        return dest.rstrip("/") or "/"
+    try:
+        siblings = mgr.list_dir(os.path.dirname(dest) or "/")
+    except FileManagerError:
+        siblings = []
+    if any(e.get("path") == dest and e.get("isdir") == 1 for e in siblings):
+        return dest
+    raise FileManagerError(f"多源批量操作要求目标为已存在目录（或以 / 结尾）: {dest}")
+
+
 def cmd_cp(args: argparse.Namespace) -> int:
     mgr = _get_file_manager()
-    dest_dir, new_name = _resolve_dest(mgr, args.src, args.dest)
-    logger.info("正在复制: %s -> %s/%s", args.src, dest_dir, new_name)
-    mgr.copy(args.src, dest_dir, new_name)
-    print(f"✅ 复制成功: {args.src} -> {dest_dir}/{new_name}")
+    srcs = args.srcs
+    if len(srcs) == 1:
+        dest_dir, new_name = _resolve_dest(mgr, srcs[0], args.dest)
+        logger.info("正在复制: %s -> %s/%s", srcs[0], dest_dir, new_name)
+        mgr.copy(srcs[0], dest_dir, new_name)
+        print(f"✅ 复制成功: {srcs[0]} -> {dest_dir}/{new_name}")
+        return 0
+
+    try:
+        dest_dir = _require_dest_dir(mgr, args.dest)
+    except FileManagerError as e:
+        print(f"❌ {e}")
+        return 1
+    payloads = [(s, dest_dir, os.path.basename(s.rstrip("/"))) for s in srcs]
+    logger.info("正在批量复制 %d 项 -> %s/", len(payloads), dest_dir)
+    mgr.batch_copy(payloads)
+    print(f"✅ 批量复制成功: {len(payloads)} 项 -> {dest_dir}/")
     return 0
 
 
 def cmd_mv(args: argparse.Namespace) -> int:
     mgr = _get_file_manager()
-    src = args.src
-    dest_dir, dest_name = _resolve_dest(mgr, src, args.dest)
-    logger.info("正在移动: %s -> %s/%s", src, dest_dir, dest_name)
-    res = mgr.batch_move([(src, dest_dir, dest_name)])
-    print(f"✅ 移动成功: {src} -> {dest_dir}/{dest_name}")
+    srcs = args.srcs
+    if len(srcs) == 1:
+        src = srcs[0]
+        dest_dir, dest_name = _resolve_dest(mgr, src, args.dest)
+        logger.info("正在移动: %s -> %s/%s", src, dest_dir, dest_name)
+        mgr.batch_move([(src, dest_dir, dest_name)])
+        print(f"✅ 移动成功: {src} -> {dest_dir}/{dest_name}")
+        return 0
+
+    try:
+        dest_dir = _require_dest_dir(mgr, args.dest)
+    except FileManagerError as e:
+        print(f"❌ {e}")
+        return 1
+    payloads = [(s, dest_dir, os.path.basename(s.rstrip("/"))) for s in srcs]
+    logger.info("正在批量移动 %d 项 -> %s/", len(payloads), dest_dir)
+    mgr.batch_move(payloads)
+    print(f"✅ 批量移动成功: {len(payloads)} 项 -> {dest_dir}/")
     return 0
 
 
@@ -351,18 +394,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_mkdir.set_defaults(func=cmd_mkdir)
 
     # 3. mv
-    p_mv = subparsers.add_parser("mv", help="移动网盘文件或目录")
-    p_mv.add_argument("src", help="源文件路径")
-    p_mv.add_argument("dest", help="目标目录路径")
+    p_mv = subparsers.add_parser(
+        "mv",
+        help="移动网盘文件或目录（多源时目标须为已存在目录；单源支持移动改名）",
+    )
+    p_mv.add_argument("srcs", nargs="+", help="一个或多个源路径")
+    p_mv.add_argument("dest", help="目标目录路径（单源时可为 目标目录/新名）")
     p_mv.set_defaults(func=cmd_mv)
 
     # 3.1 cp
     p_cp = subparsers.add_parser(
         "cp",
-        help="复制网盘文件或目录（目标为已存在目录时复制入内，否则视为 目标目录/新名）",
+        help="复制网盘文件或目录（多源时目标须为已存在目录；单源目标为已存在目录时复制入内，否则视为 目标目录/新名）",
     )
-    p_cp.add_argument("src", help="源文件或目录路径")
-    p_cp.add_argument("dest", help="目标目录路径，或 目标目录/新名")
+    p_cp.add_argument("srcs", nargs="+", help="一个或多个源路径")
+    p_cp.add_argument("dest", help="目标目录路径，或 目标目录/新名（仅单源）")
     p_cp.set_defaults(func=cmd_cp)
 
     # 3.2 rm
