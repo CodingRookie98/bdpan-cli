@@ -205,3 +205,49 @@ def test_cli_mv_trailing_slash(capsys):
         assert exit_code == 0
         mock_mgr.list_dir.assert_not_called()
         mock_mgr.batch_move.assert_called_once_with([("/a/b.txt", "/c", "b.txt")])
+
+
+def test_cli_quota(capsys):
+    with patch("bdpan_cli.cli._get_account_client") as mock_client_getter:
+        mock_client = MagicMock()
+        mock_client.quota.return_value = {"errno": 0, "total": 3221225472000, "used": 1073741824000}
+        mock_client_getter.return_value = mock_client
+
+        exit_code = main(["quota"])
+        assert exit_code == 0
+        mock_client.quota.assert_called_once_with(check_expire=False, check_free=False)
+        captured = capsys.readouterr()
+        assert "网盘容量" in captured.out
+        assert "3000.00 GB" in captured.out
+        assert "1000.00 GB" in captured.out
+
+
+def test_cli_quota_expire_timestamp_formatted(capsys):
+    with patch("bdpan_cli.cli._get_account_client") as mock_client_getter:
+        mock_client = MagicMock()
+        mock_client.quota.return_value = {"errno": 0, "total": 100, "used": 0, "expire": 1893456000}
+        mock_client_getter.return_value = mock_client
+
+        exit_code = main(["quota", "--check-expire"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "2030-01-01" in captured.out
+
+
+def test_cli_whoami(capsys):
+    with patch("bdpan_cli.cli._get_account_client") as mock_client_getter:
+        mock_client = MagicMock()
+        mock_client.user_info.return_value = {
+            "errno": 0,
+            "baidu_name": "alice",
+            "netdisk_name": "alice_net",
+            "vip_type": 2,
+        }
+        mock_client_getter.return_value = mock_client
+
+        exit_code = main(["whoami"])
+        assert exit_code == 0
+        mock_client.user_info.assert_called_once_with()
+        captured = capsys.readouterr()
+        assert "alice" in captured.out
+        assert "超级会员" in captured.out

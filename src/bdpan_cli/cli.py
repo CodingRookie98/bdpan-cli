@@ -7,8 +7,10 @@ import json
 import logging
 import os
 import sys
+from datetime import datetime
 from typing import Any
 
+from bdpan_cli.account import AccountClient, AccountError
 from bdpan_cli.auth import TokenManager
 from bdpan_cli.config import load_config
 from bdpan_cli.file_manager import FileManager, FileManagerError
@@ -24,6 +26,12 @@ def _get_file_manager() -> FileManager:
     config = load_config()
     token = TokenManager(config).get_access_token()
     return FileManager(token)
+
+
+def _get_account_client() -> AccountClient:
+    config = load_config()
+    token = TokenManager(config).get_access_token()
+    return AccountClient(token)
 
 
 def _format_size(size_bytes: int) -> str:
@@ -216,6 +224,39 @@ def cmd_meta_poster(args: argparse.Namespace) -> int:
     return 0
 
 
+def _format_vip(vip_type: Any) -> str:
+    return {0: "普通用户", 1: "普通会员", 2: "超级会员"}.get(vip_type, f"未知({vip_type})")
+
+
+def cmd_quota(args: argparse.Namespace) -> int:
+    client = _get_account_client()
+    res = client.quota(check_expire=args.check_expire, check_free=args.check_free)
+    total = int(res.get("total") or 0)
+    used = int(res.get("used") or 0)
+    print("💾 网盘容量:")
+    print(f"  总容量: {_format_size(total)}")
+    print(f"  已用:   {_format_size(used)}")
+    if total > 0:
+        print(f"  可用:   {_format_size(max(total - used, 0))} (使用率 {used / total * 100:.1f}%)")
+    if res.get("free") is not None:
+        print(f"  免费配额: {_format_size(int(res['free']))}")
+    expire = res.get("expire")
+    if expire:
+        expire_str = datetime.fromtimestamp(int(expire)).strftime("%Y-%m-%d %H:%M:%S")
+        print(f"  会员容量到期: {expire_str}")
+    return 0
+
+
+def cmd_whoami(args: argparse.Namespace) -> int:
+    client = _get_account_client()
+    res = client.user_info()
+    print("👤 网盘账户信息:")
+    print(f"  百度账号: {res.get('baidu_name') or '-'}")
+    print(f"  网盘名:   {res.get('netdisk_name') or '-'}")
+    print(f"  会员类型: {_format_vip(res.get('vip_type'))}")
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # CLI 参数解析与调度
 # ---------------------------------------------------------------------------
@@ -307,6 +348,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_poster.add_argument("dir", help="电影目录或父目录")
     p_poster.add_argument("--dry-run", action="store_true", help="仅预演抓取，不上传")
     p_poster.set_defaults(func=cmd_meta_poster)
+
+    # 6. quota
+    p_quota = subparsers.add_parser("quota", help="查询网盘容量配额")
+    p_quota.add_argument("--check-expire", action="store_true", help="同时检查会员容量过期时间")
+    p_quota.add_argument("--check-free", action="store_true", help="同时查询免费容量配额")
+    p_quota.set_defaults(func=cmd_quota)
+
+    # 7. whoami
+    p_whoami = subparsers.add_parser("whoami", help="查询当前网盘账户信息")
+    p_whoami.set_defaults(func=cmd_whoami)
 
     return parser
 
