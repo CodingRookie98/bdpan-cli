@@ -417,3 +417,84 @@ def test_cli_mv_single_source_unchanged(capsys):
         assert exit_code == 0
         # 单源保持既有双语义：走 _resolve_dest + batch_move 单项通道
         mock_mgr.batch_move.assert_called_once_with([("/a/x", "/dst", "x")])
+
+
+def _make_local_file(tmp_path, name="f.bin", size=10):
+    f = tmp_path / name
+    f.write_bytes(b"\x01" * size)
+    return str(f)
+
+
+def test_cli_upload_into_existing_dir(tmp_path, capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.Uploader") as mock_uploader_cls:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [{"path": "/dst", "isdir": 1}]
+        mock_mgr_getter.return_value = mock_mgr
+        mock_uploader_cls.return_value.upload.return_value = {
+            "errno": 0, "path": "/dst/f.bin", "size": 10, "server_filename": "f.bin"
+        }
+
+        local = _make_local_file(tmp_path)
+        exit_code = main(["upload", local, "/dst"])
+        assert exit_code == 0
+        mock_uploader_cls.return_value.upload.assert_called_once()
+        call_args = mock_uploader_cls.return_value.upload.call_args
+        assert call_args[0] == (local, "/dst/f.bin")
+        assert call_args[1]["rtype"] == 1
+        assert callable(call_args[1]["progress"])
+        captured = capsys.readouterr()
+        assert "上传成功: /dst/f.bin (10 B)" in captured.out
+
+
+def test_cli_upload_trailing_slash_no_probe(tmp_path, capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.Uploader") as mock_uploader_cls:
+        mock_mgr = MagicMock()
+        mock_mgr_getter.return_value = mock_mgr
+        mock_uploader_cls.return_value.upload.return_value = {
+            "errno": 0, "path": "/dst2/f.bin", "size": 10, "server_filename": "f.bin"
+        }
+
+        local = _make_local_file(tmp_path)
+        exit_code = main(["upload", local, "/dst2/"])
+        assert exit_code == 0
+        mock_mgr.list_dir.assert_not_called()
+        assert mock_uploader_cls.return_value.upload.call_args[0] == (local, "/dst2/f.bin")
+
+
+def test_cli_upload_full_target_path(tmp_path):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.Uploader") as mock_uploader_cls:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = []  # dest 不存在 → 目标目录/新名
+        mock_mgr_getter.return_value = mock_mgr
+        mock_uploader_cls.return_value.upload.return_value = {"errno": 0, "path": "/dst/renamed.bin"}
+
+        local = _make_local_file(tmp_path)
+        exit_code = main(["upload", local, "/dst/renamed.bin"])
+        assert exit_code == 0
+        assert mock_uploader_cls.return_value.upload.call_args[0] == (local, "/dst/renamed.bin")
+
+
+def test_cli_upload_overwrite_flag(tmp_path):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.Uploader") as mock_uploader_cls:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = []
+        mock_mgr_getter.return_value = mock_mgr
+        mock_uploader_cls.return_value.upload.return_value = {"errno": 0, "path": "/dst/f.bin"}
+
+        local = _make_local_file(tmp_path)
+        exit_code = main(["upload", local, "/dst/f.bin", "--overwrite"])
+        assert exit_code == 0
+        assert mock_uploader_cls.return_value.upload.call_args[1]["rtype"] == 3
+
+
+def test_cli_upload_missing_local_file(tmp_path, capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr_getter.return_value = MagicMock()
+
+        exit_code = main(["upload", str(tmp_path / "nope.bin"), "/dst/"])
+        assert exit_code == 1
+        assert "本地文件不存在" in capsys.readouterr().out

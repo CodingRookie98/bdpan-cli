@@ -21,3 +21,4 @@ build/
 
 # goal-loop 工作状态（协议假定其被忽略）
 .goal-loop/
+.bdpan_uploads.json

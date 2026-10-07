@@ -11,15 +11,19 @@ from datetime import datetime
 from typing import Any
 
 from bdpan_cli.account import AccountClient, AccountError
-from bdpan_cli.auth import TokenManager
+from bdpan_cli.auth import TOKEN_CACHE, TokenManager
 from bdpan_cli.config import load_config
 from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
 from bdpan_cli.preview_scrape import generate_preview
+from bdpan_cli.uploader import Uploader
 from bdpan_cli.apply_scrape_rename import apply_renames
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("bdpan_cli.cli")
+
+# 断点续传状态文件：与 token 缓存同目录（项目根，git-ignored）
+UPLOAD_STATE_FILE = TOKEN_CACHE.parent / ".bdpan_uploads.json"
 
 
 def _get_file_manager() -> FileManager:
@@ -274,6 +278,44 @@ def cmd_tree(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_upload_progress(event: dict[str, Any]) -> None:
+    phase = event["phase"]
+    if phase == "precreate":
+        print("📡 预上传完成，已获取上传任务 ID")
+    elif phase == "resume":
+        print(f"💡 断点续传: 已有 {event['present']} 片在云端，补传 {event['missing']} 片")
+    elif phase == "chunk":
+        print(f"  ⬆️  分片 {event['seq'] + 1}/{event['total']} 上传成功")
+
+
+def cmd_upload(args: argparse.Namespace) -> int:
+    local = args.local_path
+    if not os.path.isfile(local):
+        print(f"❌ 本地文件不存在: {local}")
+        return 1
+
+    mgr = _get_file_manager()
+    # 目标语义与 cp 一致：尾斜杠/已存在目录 → 保持本地文件名；否则 目标目录/新名
+    dest_dir, new_name = _resolve_dest(mgr, local, args.remote_dest)
+    remote_path = (dest_dir.rstrip("/") or "") + "/" + new_name
+
+    uploader = Uploader(mgr.access_token, mgr.api_client)
+    rtype = 3 if args.overwrite else 1
+    logger.info("开始上传: %s -> %s (rtype=%d)", local, remote_path, rtype)
+    res = uploader.upload(
+        local,
+        remote_path,
+        rtype=rtype,
+        progress=_print_upload_progress,
+        state_file=UPLOAD_STATE_FILE,
+    )
+    size_str = _format_size(int(res.get("size") or 0))
+    print(f"✅ 上传成功: {res.get('path') or remote_path} ({size_str})")
+    if res.get("server_filename") and res.get("server_filename") != new_name:
+        print(f"ℹ️  云端冲突已自动改名: {new_name} -> {res['server_filename']}")
+    return 0
+
+
 def cmd_scrape_preview(args: argparse.Namespace) -> int:
     target_dir = args.dir
     output_file = args.output
@@ -491,6 +533,19 @@ def build_parser() -> argparse.ArgumentParser:
     p_tree.add_argument("--depth", type=int, default=None, help="最大遍历深度 (默认: 不限)")
     p_tree.add_argument("--index", default=None, metavar="FILE", help="将遍历索引写入本地 JSON 文件")
     p_tree.set_defaults(func=cmd_tree)
+
+    # 10. upload
+    p_upload = subparsers.add_parser(
+        "upload",
+        help="上传本地文件（预上传→分片→创建，支持断点续传）",
+    )
+    p_upload.add_argument("local_path", help="本地文件路径")
+    p_upload.add_argument(
+        "remote_dest",
+        help="网盘目标目录（尾斜杠或已存在目录则保持文件名），或 目标目录/新名",
+    )
+    p_upload.add_argument("--overwrite", action="store_true", help="同名冲突时覆盖（默认自动改名）")
+    p_upload.set_defaults(func=cmd_upload)
 
     return parser
 
