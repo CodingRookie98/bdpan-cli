@@ -251,3 +251,50 @@ def test_cli_whoami(capsys):
         captured = capsys.readouterr()
         assert "alice" in captured.out
         assert "超级会员" in captured.out
+
+
+def test_cli_search(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.search.return_value = [
+            {"path": "/影视/电影/a", "server_filename": "a", "isdir": 1, "size": 0},
+            {"path": "/影视/b.mkv", "server_filename": "b.mkv", "isdir": 0, "size": 2048},
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["search", "关键词", "--dir", "/影视"])
+        assert exit_code == 0
+        mock_mgr.search.assert_called_once_with(
+            "关键词", dir_path="/影视", recursion=True, page=1, num=100
+        )
+        captured = capsys.readouterr()
+        assert "/影视/电影/a" in captured.out
+        assert "/影视/b.mkv" in captured.out
+        assert "2.0 KB" in captured.out
+
+
+def test_cli_search_empty(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.search.return_value = []
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["search", "不存在"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "未找到" in captured.out
+
+
+def test_cli_search_full_page_hint(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.search.return_value = [
+            {"path": f"/f/{i}", "server_filename": str(i), "isdir": 0, "size": 1}
+            for i in range(3)
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["search", "k", "--num", "3"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "--page 2" in captured.out

@@ -160,6 +160,36 @@ def cmd_rename(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_search(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    entries = mgr.search(
+        args.key,
+        dir_path=args.dir,
+        recursion=not args.no_recursion,
+        page=args.page,
+        num=args.num,
+    )
+    if not entries:
+        print(f"🔍 未找到与「{args.key}」匹配的条目。")
+        return 0
+    dirs = [e for e in entries if e.get("isdir") == 1]
+    files = [e for e in entries if e.get("isdir") != 1]
+    total_size = sum(f.get("size", 0) for f in files)
+    print(
+        f"\n🔍 搜索「{args.key}」第 {args.page} 页: 共 {len(entries)} 项"
+        f"（{len(dirs)} 个目录，{len(files)} 个文件，合计 {_format_size(total_size)}）\n"
+    )
+    for idx, e in enumerate(entries, 1):
+        is_dir = e.get("isdir") == 1
+        tag = "[DIR] " if is_dir else "[FILE]"
+        size_str = "" if is_dir else f" ({_format_size(e.get('size', 0))})"
+        print(f" {idx:3d}. {tag} {e.get('path')}{size_str}")
+    if len(entries) == args.num:
+        print(f"\n💡 本页结果已满，可能还有更多，可尝试 --page {args.page + 1} 翻页。")
+    print()
+    return 0
+
+
 def cmd_scrape_preview(args: argparse.Namespace) -> int:
     target_dir = args.dir
     output_file = args.output
@@ -358,6 +388,15 @@ def build_parser() -> argparse.ArgumentParser:
     # 7. whoami
     p_whoami = subparsers.add_parser("whoami", help="查询当前网盘账户信息")
     p_whoami.set_defaults(func=cmd_whoami)
+
+    # 8. search
+    p_search = subparsers.add_parser("search", help="按关键词搜索网盘文件")
+    p_search.add_argument("key", help="搜索关键词")
+    p_search.add_argument("--dir", default=None, help="限定搜索目录 (默认: 全盘)")
+    p_search.add_argument("--no-recursion", action="store_true", help="不递归子目录，仅搜当前层")
+    p_search.add_argument("--page", type=int, default=1, help="页码 (默认: 1)")
+    p_search.add_argument("--num", type=int, default=100, help="每页条数 (默认: 100)")
+    p_search.set_defaults(func=cmd_search)
 
     return parser
 

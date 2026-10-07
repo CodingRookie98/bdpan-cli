@@ -74,6 +74,44 @@ class FileManager:
             start += len(entries)
         return all_entries
 
+    def search(
+        self,
+        key: str,
+        dir_path: str | None = None,
+        recursion: bool = True,
+        page: int = 1,
+        num: int = 100,
+    ) -> list[dict[str, Any]]:
+        """按关键词搜索网盘文件（单页结果）。
+
+        Args:
+            key: 搜索关键词。
+            dir_path: 限定搜索目录（None 为全盘）。
+            recursion: 是否递归子目录。
+            page: 页码（从 1 起）。
+            num: 每页条数。
+
+        Returns:
+            当前页条目列表，条目字段同 list_dir（fs_id/path/server_filename/size/isdir 等）。
+        """
+        kwargs: dict[str, Any] = {
+            "web": "1",
+            "num": str(num),
+            "page": str(page),
+            "recursion": "1" if recursion else "0",
+        }
+        if dir_path:
+            kwargs["dir"] = dir_path
+        try:
+            res = self._fileinfo_api.xpanfilesearch(
+                access_token=self.access_token,
+                key=key,
+                **kwargs,
+            )
+        except ApiException as e:
+            raise FileManagerError(f"搜索失败 [{key}]: {e.status} {e.body}") from e
+        return res.get("list", []) if isinstance(res, dict) else []
+
     def mkdir(self, path: str) -> dict[str, Any]:
         """创建目录。若目录已存在，视作正常成功。"""
         try:

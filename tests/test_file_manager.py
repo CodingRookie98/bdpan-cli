@@ -282,3 +282,59 @@ def test_delete_success_without_info():
     res = mgr.delete("/test/path")
     assert res.get("errno") == 0
 
+
+
+def test_search_forwards_params():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._fileinfo_api = MagicMock()
+    mgr._fileinfo_api.xpanfilesearch.return_value = {
+        "list": [{"path": "/a/b.mkv", "server_filename": "b.mkv", "size": 1, "isdir": 0}]
+    }
+
+    res = mgr.search("movie", dir_path="/a", recursion=True, page=2, num=50)
+    assert len(res) == 1
+    mgr._fileinfo_api.xpanfilesearch.assert_called_once_with(
+        access_token="fake-token",
+        key="movie",
+        web="1",
+        num="50",
+        page="2",
+        recursion="1",
+        dir="/a",
+    )
+
+
+def test_search_without_dir_omits_dir_param():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._fileinfo_api = MagicMock()
+    mgr._fileinfo_api.xpanfilesearch.return_value = {"list": []}
+
+    res = mgr.search("movie")
+    assert res == []
+    call_kwargs = mgr._fileinfo_api.xpanfilesearch.call_args[1]
+    assert "dir" not in call_kwargs
+    assert call_kwargs["recursion"] == "1"
+
+
+def test_search_no_recursion():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._fileinfo_api = MagicMock()
+    mgr._fileinfo_api.xpanfilesearch.return_value = {"list": []}
+
+    mgr.search("k", dir_path="/d", recursion=False)
+    call_kwargs = mgr._fileinfo_api.xpanfilesearch.call_args[1]
+    assert call_kwargs["recursion"] == "0"
+    assert call_kwargs["dir"] == "/d"
+
+
+def test_search_http_error_wrapped():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._fileinfo_api = MagicMock()
+    mgr._fileinfo_api.xpanfilesearch.side_effect = ApiException(status=400, reason="Bad Request")
+
+    with pytest.raises(FileManagerError, match="搜索失败"):
+        mgr.search("k")
