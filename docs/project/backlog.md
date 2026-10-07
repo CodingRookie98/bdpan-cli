@@ -1,28 +1,33 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.2.0
+> - **文档版本**: V1.3.0
 > - **文档标识**: BKLG-bdpan-cli
-> - **生效日期**: 2026-09-30
+> - **生效日期**: 2026-10-07
 > - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
 
 ## 进行中
 
-（暂无进行中任务，准备进入第三阶段元数据与封面海报自动化生成）
+（暂无进行中任务，下一批聚焦 CLI 基础功能收尾：BK-0018~BK-0023）
 
 ## 计划中
 
-- [ ] BK-0017 第三阶段：电影元数据与封面海报全量自动化生成与上传 (`meta` 子系统)
-  - [ ] `bdpan meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
-  - [ ] `bdpan meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
-  - [ ] 支持断点续传、已存在跳过（幂等性）与 `--dry-run` 预览模式
-  - [ ] 对 `/影视/电影/watched`（266部）与 `/影视/电影/unwatched`（36部）共 302 部电影全量批处理
 - [ ] BK-0018 文件操作命令多源批量参数（`cp`/`mv`/`rm` 批量语义，方案 B 残余项）
 - [ ] BK-0019 递归遍历网盘文件树（`MultimediafileApi.xpanfilelistall`）并落地本地索引
 - [ ] BK-0020 文件搜索 CLI（`FileinfoApi.xpanfilesearch`）
 - [ ] BK-0021 大文件分片上传与断点续传（预上传 → 分片 → 创建，`FileuploadApi`）
 - [ ] BK-0022 网盘容量与用户信息查询（`UserinfoApi`）
 - [ ] BK-0023 文档治理体系落地：tutorials / how-to / explanation 象限按需填充
+
+## 待定（暂缓，待需求触发）
+
+> 方案 A 目录名规范化刮削已全量落地（BK-0007/BK-0010），电影目录名末尾携带 IMDb/TMDB ID，Kodi/Emby/Jellyfin 等媒体管理器可直接依据目录名完成精准刮削，CLI 暂不自建完整元数据子系统；待用户或社区提出明确需求后重新立项推进。
+
+- [ ] BK-0017 `[Trigger:用户/社区明确需求]` 第三阶段：电影元数据与封面海报全量自动化生成与上传 (`meta` 子系统)
+  - [ ] `bdpan meta nfo <dir>`：依据方案 A 目录名末尾的 IMDb/TMDB ID，精准查询 TMDB 电影详情并生成符合 Kodi/Emby/Jellyfin 格式的 `movie.nfo`（支持评分、演职员、分级、标签、中文简介等）
+  - [ ] `bdpan meta poster <dir>`：下载 TMDB 最高清竖版官方海报，流式调用百度网盘上传接口写入各电影根目录的 `poster.jpg`
+  - [ ] 支持断点续传、已存在跳过（幂等性）与 `--dry-run` 预览模式
+  - [ ] 对 `/影视/电影/watched`（266部）与 `/影视/电影/unwatched`（36部）共 302 部电影全量批处理
 
 ## 已关闭
 
@@ -47,6 +52,7 @@
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V1.3.0 | 2026-10-07 | BK-0017 第三阶段 `meta` 子系统划为待定（Kodi/Emby/Jellyfin 可依目录名 IMDb/TMDB ID 精准刮削，待用户/社区需求再立项），开发重心转向 CLI 基础功能收尾 |
 | V1.2.0 | 2026-09-30 | 关闭 BK-0013~BK-0016（file-ops P4 审查建议四项全部落地） |
 | V1.1.0 | 2026-09-30 | 全量条目迁移 BK-0001~BK-0023 编号，补控制头，接入 backlog-specification.md 规范 |
 | V1.0.0 | 2026-09-29 | 建立"进行中/计划中/已关闭"三区待办清单 |
