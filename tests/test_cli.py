@@ -298,3 +298,61 @@ def test_cli_search_full_page_hint(capsys):
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "--page 2" in captured.out
+
+
+def test_cli_tree(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.walk.return_value = (
+            [
+                (0, {"path": "/t/A", "server_filename": "A", "isdir": 1, "size": 0}),
+                (1, {"path": "/t/A/c.mkv", "server_filename": "c.mkv", "isdir": 0, "size": 1048576}),
+                (0, {"path": "/t/b.txt", "server_filename": "b.txt", "isdir": 0, "size": 10}),
+            ],
+            [],
+        )
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["tree", "/t", "--depth", "2"])
+        assert exit_code == 0
+        mock_mgr.walk.assert_called_once_with("/t", max_depth=2)
+        captured = capsys.readouterr()
+        assert "递归 1 个子目录，2 个文件" in captured.out
+        assert "c.mkv (1.0 MB)" in captured.out
+        assert "b.txt (10 B)" in captured.out
+
+
+def test_cli_tree_writes_index(tmp_path, capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        entry = {"path": "/t/b.txt", "server_filename": "b.txt", "isdir": 0, "size": 10, "fs_id": 42}
+        mock_mgr.walk.return_value = ([(0, entry)], [])
+        mock_mgr_getter.return_value = mock_mgr
+
+        index_file = tmp_path / "index.json"
+        exit_code = main(["tree", "/t", "--index", str(index_file)])
+        assert exit_code == 0
+
+        import json
+        payload = json.loads(index_file.read_text(encoding="utf-8"))
+        assert payload["version"] == 1
+        assert payload["root"] == "/t"
+        assert payload["stats"] == {"dirs": 0, "files": 1, "total_size": 10}
+        assert payload["errors"] == []
+        assert payload["entries"] == [entry]
+
+
+def test_cli_tree_partial_errors_exit_1(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.walk.return_value = (
+            [(0, {"path": "/t/b.txt", "server_filename": "b.txt", "isdir": 0, "size": 1})],
+            [("/t/locked", "读取目录失败 [/t/locked]: 31066")],
+        )
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["tree", "/t"])
+        assert exit_code == 1
+        captured = capsys.readouterr()
+        assert "1 个子目录读取失败" in captured.out
+        assert "/t/locked" in captured.out

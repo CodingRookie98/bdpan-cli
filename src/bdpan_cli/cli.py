@@ -190,6 +190,47 @@ def cmd_search(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_tree(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    root = args.path or "/"
+    logger.info("递归遍历目录树: root=%s, max_depth=%s", root, args.depth)
+    entries, errors = mgr.walk(root, max_depth=args.depth)
+
+    dirs = [e for _, e in entries if e.get("isdir") == 1]
+    files = [e for _, e in entries if e.get("isdir") != 1]
+    total_size = sum(f.get("size", 0) for f in files)
+    print(
+        f"🌲 {root} (递归 {len(dirs)} 个子目录，{len(files)} 个文件，"
+        f"总计 {_format_size(total_size)})\n"
+    )
+    for depth, e in entries:
+        is_dir = e.get("isdir") == 1
+        indent = "    " * depth
+        marker = "📁" if is_dir else "📄"
+        size_str = "" if is_dir else f" ({_format_size(e.get('size', 0))})"
+        print(f"{indent}{marker} {e.get('server_filename')}{size_str}")
+
+    if args.index:
+        payload = {
+            "version": 1,
+            "root": root,
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+            "stats": {"dirs": len(dirs), "files": len(files), "total_size": total_size},
+            "errors": [{"path": p, "error": msg} for p, msg in errors],
+            "entries": [e for _, e in entries],
+        }
+        with open(args.index, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+        print(f"\n💾 本地索引已写入: {args.index} ({len(entries)} 条)")
+
+    if errors:
+        print(f"\n⚠️  {len(errors)} 个子目录读取失败，遍历结果不完整:")
+        for path, msg in errors:
+            print(f"  - {path}: {msg}")
+        return 1
+    return 0
+
+
 def cmd_scrape_preview(args: argparse.Namespace) -> int:
     target_dir = args.dir
     output_file = args.output
@@ -397,6 +438,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_search.add_argument("--page", type=int, default=1, help="页码 (默认: 1)")
     p_search.add_argument("--num", type=int, default=100, help="每页条数 (默认: 100)")
     p_search.set_defaults(func=cmd_search)
+
+    # 9. tree
+    p_tree = subparsers.add_parser("tree", help="递归遍历网盘目录树（客户端逐层遍历，可选落地本地索引）")
+    p_tree.add_argument("path", nargs="?", default="/", help="网盘目录路径 (默认: /)")
+    p_tree.add_argument("--depth", type=int, default=None, help="最大遍历深度 (默认: 不限)")
+    p_tree.add_argument("--index", default=None, metavar="FILE", help="将遍历索引写入本地 JSON 文件")
+    p_tree.set_defaults(func=cmd_tree)
 
     return parser
 

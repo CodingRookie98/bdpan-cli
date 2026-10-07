@@ -338,3 +338,74 @@ def test_search_http_error_wrapped():
 
     with pytest.raises(FileManagerError, match="搜索失败"):
         mgr.search("k")
+
+
+def test_walk_dfs_preorder_with_depth():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    dir_a = {"path": "/root/A", "server_filename": "A", "isdir": 1, "size": 0}
+    file_b = {"path": "/root/b.txt", "server_filename": "b.txt", "isdir": 0, "size": 5}
+    file_c = {"path": "/root/A/c.mkv", "server_filename": "c.mkv", "isdir": 0, "size": 9}
+
+    def list_dir_side_effect(path, limit=1000):
+        return {"/root": [dir_a, file_b], "/root/A": [file_c]}[path]
+
+    mgr.list_dir = MagicMock(side_effect=list_dir_side_effect)
+
+    entries, errors = mgr.walk("/root")
+    assert errors == []
+    # DFS 先序：A 的子树先于同层 b.txt，深度相对 root 起算
+    assert [(d, e["path"]) for d, e in entries] == [
+        (0, "/root/A"),
+        (1, "/root/A/c.mkv"),
+        (0, "/root/b.txt"),
+    ]
+
+
+def test_walk_max_depth_limits_recursion():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    dir_a = {"path": "/root/A", "server_filename": "A", "isdir": 1, "size": 0}
+
+    calls = []
+
+    def list_dir_side_effect(path, limit=1000):
+        calls.append(path)
+        return {"/root": [dir_a], "/root/A": [{"path": "/root/A/deep", "isdir": 1}]}[path]
+
+    mgr.list_dir = MagicMock(side_effect=list_dir_side_effect)
+
+    entries, errors = mgr.walk("/root", max_depth=1)
+    assert errors == []
+    assert [e["path"] for _, e in entries] == ["/root/A"]
+    assert calls == ["/root"]  # 深度受限，不再发起子目录请求
+
+
+def test_walk_tolerates_unreadable_subdir():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    dir_a = {"path": "/root/A", "server_filename": "A", "isdir": 1, "size": 0}
+    file_b = {"path": "/root/b.txt", "server_filename": "b.txt", "isdir": 0, "size": 5}
+
+    def list_dir_side_effect(path, limit=1000):
+        if path == "/root":
+            return [dir_a, file_b]
+        raise FileManagerError(f"读取目录失败 [{path}]: 31066")
+
+    mgr.list_dir = MagicMock(side_effect=list_dir_side_effect)
+
+    entries, errors = mgr.walk("/root")
+    # A 本身在父目录列表中可见，仍作为条目产出；仅其子树缺失
+    assert [e["path"] for _, e in entries] == ["/root/A", "/root/b.txt"]
+    assert errors == [("/root/A", "读取目录失败 [/root/A]: 31066")]
+
+
+def test_walk_root_unreadable_records_error():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr.list_dir = MagicMock(side_effect=FileManagerError("读取目录失败 [/gone]: 31066"))
+
+    entries, errors = mgr.walk("/gone")
+    assert entries == []
+    assert len(errors) == 1
+    assert errors[0][0] == "/gone"

@@ -14,6 +14,8 @@ from openapi_client.rest import ApiException
 
 logger = logging.getLogger(__name__)
 
+WalkResult = tuple[list[tuple[int, dict[str, Any]]], list[tuple[str, str]]]
+
 
 class FileManagerError(RuntimeError):
     """文件管理异常基类。"""
@@ -73,6 +75,48 @@ class FileManager:
                 break
             start += len(entries)
         return all_entries
+
+    def walk(self, root: str, max_depth: int | None = None) -> WalkResult:
+        """深度优先递归遍历网盘子树。
+
+        引擎说明：SDK 的 MultimediafileApi.xpanfilelistall 在当前应用权限下
+        对所有路径均返回 errno=20020「该路径不在允许的访问范围内」（实测，
+        含应用自建目录），故采用已验证可用的 xpanfilelist 客户端侧逐层递归，
+        每个子目录一次 API 调用。
+
+        Args:
+            root: 遍历起点目录。
+            max_depth: 最大遍历深度（root 直接子项为深度 0）；None 为不限。
+
+        Returns:
+            (entries, errors) 二元组：
+            - entries: (depth, entry) 列表，DFS 先序，depth 相对 root；
+            - errors: (path, errmsg) 列表，记录不可读目录；单个子目录
+              读取失败不中断遍历（降级可观测），root 失败时 entries 为空。
+        """
+        entries: list[tuple[int, dict[str, Any]]] = []
+        errors: list[tuple[str, str]] = []
+        self._walk_recursive(root, 0, max_depth, entries, errors)
+        return entries, errors
+
+    def _walk_recursive(
+        self,
+        path: str,
+        depth: int,
+        max_depth: int | None,
+        entries: list[tuple[int, dict[str, Any]]],
+        errors: list[tuple[str, str]],
+    ) -> None:
+        try:
+            children = self.list_dir(path)
+        except FileManagerError as e:
+            logger.warning("遍历跳过不可读目录 [%s]: %s", path, e)
+            errors.append((path, str(e)))
+            return
+        for entry in children:
+            entries.append((depth, entry))
+            if entry.get("isdir") == 1 and (max_depth is None or depth + 1 < max_depth):
+                self._walk_recursive(entry["path"], depth + 1, max_depth, entries, errors)
 
     def search(
         self,
