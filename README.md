@@ -11,10 +11,15 @@ uv run bdpan --help
 # 常用命令
 uv run bdpan ls /影视/电影
 uv run bdpan mkdir /新目录
-uv run bdpan mv <源路径> <目标目录|目标目录/新名>
-uv run bdpan cp <源路径> <目标目录|目标目录/新名>
+uv run bdpan mv <源路径>... <目标目录>          # 多源时目标须为已存在目录
+uv run bdpan cp <源路径>... <目标目录|目标目录/新名>  # 单源支持改名
 uv run bdpan rename <路径> <新名称>
 uv run bdpan rm <路径>... [-y]
+uv run bdpan quota [--check-expire] [--check-free]  # 网盘容量
+uv run bdpan whoami                             # 账户信息
+uv run bdpan search <关键词> [--dir 目录] [--no-recursion]
+uv run bdpan tree <路径> [--depth N] [--index 索引.json]  # 递归树+本地索引
+uv run bdpan upload <本地文件> <目标目录|目标目录/新名> [--overwrite]  # 分片上传+断点续传
 uv run bdpan scrape foldering /影视/电影/unscraped
 ```
 

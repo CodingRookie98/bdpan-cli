@@ -2,6 +2,15 @@
 
 > 记录每次交付的功能与文档演进。格式：日期 + 版本 + 变更摘要。
 
+## 2026-10-07
+
+- **feat(cli)**: 大文件分片上传与断点续传（BK-0021）。新增 `Uploader`（`uploader.py`）实现官方三阶段流程：预上传（`autoinit=1`、逐片 4MB 流式 MD5）→ 分片上传（`type=tmpfile`、瞬时失败重试 3 次）→ 创建文件（`block_list`/`uploadid`/`rtype` 与预上传严格一致）；`rtype` 默认 1 冲突自动改名、`--overwrite` 为 3 覆盖。断点续传采用本地状态文件（`.bdpan_uploads.json`，git-ignored）记录 uploadid 与已传分片——真网盘实测服务端不按路径跨 uploadid 记忆分片，恢复时凭原 uploadid 仅补缺失片，uploadid 失效自动回退全新上传。SDK 适配实证：`superfile2` file 参数要求带 `.name` 的 IOBase、分片成功响应无 `errno` 字段、precreate 对本应用在非 `/apps` 路径可用。真网盘 L2：9MB 全新上传大小精确一致；80MB/20 片真中断（kill 进程树）后重跑仅补传 15 片原路径成功；冲突自动改名语义实测；沙箱零残留。测试 98→104。
+- **feat(cli)**: `cp`/`mv` 多源批量参数（BK-0018）。源参数升级 `nargs='+'`：多源时目标必须为已存在目录（或尾斜杠），逐源取 basename 组批走既有 batch 基建（50 项/批 + 逐项 errno 校验）；新增 `_require_dest_dir` 目录语义校验，不满足输出错误并退出码 1 不发请求；单源双语义（入内保名 / 改名）逐字保留。真网盘沙箱批量 mv/cp 实测对账一致、负例退出码 1、零残留。测试 76→81。
+- **feat(cli)**: 递归目录树遍历与本地索引（BK-0019）。`FileManager.walk` DFS 先序递归，返回 `(depth, entry)` 与不可读目录错误清单（单点失败降级可观测不中断）；`tree` 命令树形渲染 + `--depth` 限深 + `--index` 落地全字段保真 JSON 索引（version/root/stats/errors/entries），存在读取失败退出码 1 标记结果不完整。实测发现 SDK `xpanfilelistall` 对本应用所有路径返回 `errno=20020`（应用权限级限制，含应用自建目录），引擎改用已验证的 `xpanfilelist` 客户端侧递归。真网盘 L2：`/影视/电影` 全树 2290 条（351 目录/1939 文件/6.6TB）零失败 1m44s，索引落地回读校验通过。测试 69→76。
+- **feat(cli)**: 关键词搜索网盘文件（BK-0020）。`FileManager.search` 封装 `xpanfilesearch`（`--dir` 限定目录 / `--no-recursion` / page-num 分页）；`search` 命令输出完整路径与类型/大小统计，本页打满提示翻页。实测全盘命中方案 A 规范目录；发现服务端忽略 `num` 参数（单页整量返回）。测试 62→69。
+- **feat(cli)**: 网盘容量与账户信息查询（BK-0022）。新增 `AccountClient`（`account.py`）封装 `UserinfoApi.apiquota`/`xpannasuinfo`，SDK 模型对象经 `to_dict`/`attribute_map` 归一化；`quota` 命令（`--check-expire`/`--check-free`、使用率与会员到期格式化）与 `whoami` 命令（账号/网盘名/会员类型）。真网盘 L2 只读实测输出正确。测试 52→62。
+- **docs(backlog)**: BK-0017 第三阶段 `meta` 子系统划为待定（V1.3.0）——方案 A 目录名刮削已全量落地，Kodi/Emby/Jellyfin 可依目录名末尾 IMDb/TMDB ID 精准刮削；待用户/社区需求触发再立项。同批关闭 BK-0018~BK-0022（V1.4.0）。
+
 ## 2026-09-30
 
 - **fix(cli/filemanager)**: 落地 file-ops P4 审查建议四项（BK-0013~BK-0016）。`_resolve_dest` 探测失败 fallback 补 `logger.warning`（BK-0013）；`rm` 交互确认补 `EOFError`/`KeyboardInterrupt` 守卫，非交互 stdin / Ctrl-C 视作取消退出 0（BK-0014）；`FileManager` 四原语新增 `_validate_filemanager_result` 统一逐项 `info[].errno` 校验，防顶层 0 部分失败漏报（BK-0015）；`copy` 错误文案改单项语境，去"批量复制批次 1"字样（BK-0016）。真网盘沙箱故障注入取证：部分失败信封顶层 `errno=12` + `info[].errno=-9`（混合批中有效项实际生效）、delete 缺源幂等返回 0。单元测试 42→52 全绿，测后沙箱零残留。

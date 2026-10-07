@@ -1,22 +1,17 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.3.0
+> - **文档版本**: V1.4.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-10-07
 > - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
 
 ## 进行中
 
-（暂无进行中任务，下一批聚焦 CLI 基础功能收尾：BK-0018~BK-0023）
+（暂无进行中任务）
 
 ## 计划中
 
-- [ ] BK-0018 文件操作命令多源批量参数（`cp`/`mv`/`rm` 批量语义，方案 B 残余项）
-- [ ] BK-0019 递归遍历网盘文件树（`MultimediafileApi.xpanfilelistall`）并落地本地索引
-- [ ] BK-0020 文件搜索 CLI（`FileinfoApi.xpanfilesearch`）
-- [ ] BK-0021 大文件分片上传与断点续传（预上传 → 分片 → 创建，`FileuploadApi`）
-- [ ] BK-0022 网盘容量与用户信息查询（`UserinfoApi`）
 - [ ] BK-0023 文档治理体系落地：tutorials / how-to / explanation 象限按需填充
 
 ## 待定（暂缓，待需求触发）
@@ -31,6 +26,11 @@
 
 ## 已关闭
 
+- [x] BK-0021 大文件分片上传与断点续传（`Uploader` 三阶段 precreate/superfile2/create，本地状态文件续传真中断 E2E 实测：80MB 20 片传至 5 片中断后仅补 15 片原 uploadid 原路径成功；服务端不跨 uploadid 记忆分片为实测结论，2026-10-07）➔ [a96268b]
+- [x] BK-0022 网盘容量与用户信息查询（`AccountClient` quota/whoami 两命令，SDK 模型对象归一化，真网盘 L2 只读实测，2026-10-07）➔ [e9374e0]
+- [x] BK-0020 文件搜索 CLI（`FileManager.search` + `search` 命令，全盘/限目录/递归开关/翻页，实测命中方案 A 规范目录；实测服务端忽略 num 参数，2026-10-07）➔ [f06fff3]
+- [x] BK-0019 递归遍历网盘文件树并落地本地索引（`FileManager.walk` DFS 先序 + `tree` 命令 `--index` 全字段保真 JSON；`xpanfilelistall` 实测 errno=20020 应用权限受限全路径不可用，引擎改用 xpanfilelist 客户端侧递归，实测 2290 条零失败，2026-10-07）➔ [12f7cd1]
+- [x] BK-0018 文件操作命令多源批量参数（`cp`/`mv` 源参数 nargs='+'，`_require_dest_dir` 目录语义校验，多源走既有 batch 基建；真网盘沙箱批量 mv/cp 实测 + 零残留，2026-10-07）➔ [9dbd779]
 - [x] BK-0016 (P4 审查建议) `FileManager.copy` 错误文案去掉"批量复制批次 1"字样（copy 改走共享 `_copy_request` 单项语境文案通道，真批量场景既有文案逐字保留，2026-09-30）
 - [x] BK-0015 (P4 审查建议·立项) filemanager 四原语（copy/move/rename/delete）逐项 `info[].errno` 校验统一加固（新增 `_validate_filemanager_result` 统一助手；真网盘沙箱故障注入取证：部分失败信封顶层 `errno=12` + `info[].errno=-9`，混合批有效项实际生效，delete 缺源幂等返回 0，2026-09-30）
 - [x] BK-0014 (P4 审查建议) `rm` 交互确认补 EOFError/KeyboardInterrupt 守卫（非交互 stdin / Ctrl-C 视作取消，退出 0 不删除，2026-09-30）
@@ -52,6 +52,7 @@
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V1.4.0 | 2026-10-07 | CLI 基础功能收尾批次：关闭 BK-0018~BK-0022（多源批量/递归树+索引/搜索/分片上传+续传/容量账户），测试 52→104，全项真网盘 L2 实测 |
 | V1.3.0 | 2026-10-07 | BK-0017 第三阶段 `meta` 子系统划为待定（Kodi/Emby/Jellyfin 可依目录名 IMDb/TMDB ID 精准刮削，待用户/社区需求再立项），开发重心转向 CLI 基础功能收尾 |
 | V1.2.0 | 2026-09-30 | 关闭 BK-0013~BK-0016（file-ops P4 审查建议四项全部落地） |
 | V1.1.0 | 2026-09-30 | 全量条目迁移 BK-0001~BK-0023 编号，补控制头，接入 backlog-specification.md 规范 |

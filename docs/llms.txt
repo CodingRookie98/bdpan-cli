@@ -9,6 +9,6 @@
 
 ## Project Governance (工程演进 / 发布日志与待办)
 
-- [待办与后续方向 (Backlog)](project/backlog.md): （暂无进行中任务，准备进入第三阶段元数据与封面海报自动化生成）
+- [待办与后续方向 (Backlog)](project/backlog.md): （暂无进行中任务）
 - [变更日志 (Changelog)](project/changelog.md)
 - [CLI 文件操作命令补齐（cp/rm/rename + mv 语义修复）实施计划](project/plans/2026-09-30-file-ops-commands.md): 1. `bdpan cp <src> <dest>`：dest 为已存在目录（或以 `/` 结尾）→ 复制入内并保持原名；否则按 `目录/新名` 复制并改名；
