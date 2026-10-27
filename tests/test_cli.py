@@ -33,6 +33,54 @@ def test_cli_backward_compatibility_ls(capsys):
         assert "movie2.mkv" in captured.out
 
 
+def test_cli_ls_non_existent_path(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        # 第一次读 /not_exist 返回空列表，第二次读父目录 / 返回没有 not_exist 的列表
+        mock_mgr.list_dir.side_effect = [
+            [],
+            [{"server_filename": "other_dir", "path": "/other_dir", "isdir": 1}],
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["ls", "/not_exist"])
+        assert exit_code == 1
+        captured = capsys.readouterr()
+        assert "❌ 路径不存在: /not_exist" in captured.out
+
+
+def test_cli_ls_empty_existing_dir(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.side_effect = [
+            [],
+            [{"server_filename": "empty_dir", "path": "/empty_dir", "isdir": 1}],
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["ls", "/empty_dir"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "目录: /empty_dir" in captured.out
+        assert "共 0 项" in captured.out
+
+
+def test_cli_ls_file_path(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.side_effect = [
+            [],
+            [{"server_filename": "video.mkv", "path": "/video.mkv", "isdir": 0, "size": 1048576}],
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["ls", "/video.mkv"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "📄 文件: /video.mkv" in captured.out
+
+
+
 def test_cli_mkdir(capsys):
     with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
         mock_mgr = MagicMock()

@@ -55,8 +55,28 @@ def _format_size(size_bytes: int) -> str:
 
 def cmd_ls(args: argparse.Namespace) -> int:
     mgr = _get_file_manager()
-    path = args.path or "/"
+    raw_path = args.path or "/"
+    path = "/" + raw_path.strip("/") if raw_path != "/" else "/"
     entries = mgr.list_dir(path, limit=args.limit)
+
+    if not entries and path != "/":
+        parent_dir = os.path.dirname(path) or "/"
+        target_name = os.path.basename(path)
+        try:
+            siblings = mgr.list_dir(parent_dir)
+            match = next(
+                (e for e in siblings if e.get("server_filename") == target_name or e.get("path") == path),
+                None,
+            )
+            if not match:
+                print(f"❌ 路径不存在: {path}")
+                return 1
+            if match.get("isdir") != 1:
+                size_str = _format_size(match.get("size", 0))
+                print(f"\n📄 文件: {path} ({size_str})\n")
+                return 0
+        except FileManagerError:
+            pass
 
     dirs = [e for e in entries if e.get("isdir") == 1]
     files = [e for e in entries if e.get("isdir") != 1]
