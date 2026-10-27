@@ -13,6 +13,7 @@ from typing import Any
 from bdpan_cli.account import AccountClient, AccountError
 from bdpan_cli.auth import TOKEN_CACHE, TokenManager
 from bdpan_cli.config import load_config
+from bdpan_cli.dedup import execute_dedup, plan_dedup
 from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
 from bdpan_cli.preview_scrape import generate_preview
@@ -433,6 +434,99 @@ def cmd_whoami(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_dedup(args: argparse.Namespace) -> int:
+    mgr = _get_file_manager()
+    raw_path = args.path or "/"
+    target_dir = "/" + raw_path.strip("/") if raw_path != "/" else "/"
+
+    if args.staging_dir:
+        staging_dir = "/" + args.staging_dir.strip("/")
+        if staging_dir == target_dir:
+            print(f"❌ 隔离目录不能与待扫描目录相同: {staging_dir}")
+            return 1
+    else:
+        staging_dir = None
+
+    logger.info("扫描冲突副本: target=%s, recursive=%s", target_dir, args.recursive)
+    try:
+        plan = plan_dedup(
+            dir_path=target_dir,
+            mgr=mgr,
+            recursive=args.recursive,
+            include_orphans=args.include_orphans,
+            include_empty=args.include_empty,
+        )
+    except FileManagerError as e:
+        print(f"❌ 扫描失败: {e}")
+        return 1
+
+    if not plan.candidates:
+        print(f"✨ 目录 {target_dir} 中未发现任何冲突副本或重复条目。")
+        if plan.orphan_groups_count > 0:
+            print(f"💡 发现 {plan.orphan_groups_count} 组无主冲突副本（如仅有 (1) 与 (2)），可添加 --include-orphans 一并治理。")
+        return 0
+
+    dirs_count = sum(1 for c in plan.candidates if c.isdir)
+    files_count = sum(1 for c in plan.candidates if not c.isdir)
+    print(
+        f"\n📋 发现 {len(plan.candidates)} 个冲突与重复条目"
+        f"（{dirs_count} 个目录，{files_count} 个文件，合计 {_format_size(plan.total_size)}）：\n"
+    )
+    for idx, c in enumerate(plan.candidates, 1):
+        tag = "[DIR] " if c.isdir else "[FILE]"
+        size_str = "" if c.isdir else f" ({_format_size(c.size)})"
+        print(f" {idx:3d}. {tag} {c.path}{size_str}")
+        print(f"      原因: {c.reason}")
+    print()
+
+    # 动作决策
+    if args.dry_run or (not staging_dir and not args.delete):
+        if args.dry_run:
+            print("💡 当前为 --dry-run 预演模式，未对网盘进行任何实际变更。")
+            if staging_dir:
+                print(f"   拟隔离至: {staging_dir}")
+            elif args.delete:
+                print("   拟移入回收站直接删除。")
+            return 0
+        print("💡 提示: 当前未指定治理动作（预览模式）。可使用以下参数执行治理：")
+        print("  --staging-dir <dir>  移动至指定暂存目录隔离（推荐，如 /videos/movies/pending_delete）")
+        print("  --delete             直接删除移入回收站")
+        print("  --dry-run            预演查看影响范围")
+        return 0
+
+    if staging_dir:
+        if not args.yes:
+            try:
+                ans = input(f"确认将 {len(plan.candidates)} 项移动到隔离目录 {staging_dir}? [y/N]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print("\n已取消，未做任何变更。")
+                return 0
+            if ans != "y":
+                print("已取消，未做任何变更。")
+                return 0
+
+        res = execute_dedup(plan, mgr, staging_dir=staging_dir, batch_size=50)
+        print(f"\n🎉 治理完成！已成功将 {res['moved']} 项移入隔离目录: {staging_dir}\n")
+        return 0
+
+    if args.delete:
+        if not args.yes:
+            try:
+                ans = input(f"⚠️  确认将 {len(plan.candidates)} 项从网盘删除（服务端移入回收站）? [y/N]: ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print("\n已取消，未做任何变更。")
+                return 0
+            if ans != "y":
+                print("已取消，未做任何变更。")
+                return 0
+
+        res = execute_dedup(plan, mgr, delete=True, batch_size=50)
+        print(f"\n🎉 治理完成！已成功从网盘删除 {res['deleted']} 项（已移入回收站）。\n")
+        return 0
+
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # CLI 参数解析与调度
 # ---------------------------------------------------------------------------
@@ -566,6 +660,30 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_upload.add_argument("--overwrite", action="store_true", help="同名冲突时覆盖（默认自动改名）")
     p_upload.set_defaults(func=cmd_upload)
+
+    # 11. dedup
+    p_dedup = subparsers.add_parser(
+        "dedup",
+        help="扫描并治理网盘冲突副本与重复项 (1)/(2)（支持隔离与删除）",
+    )
+    p_dedup.add_argument("path", nargs="?", default="/", help="待扫描的网盘目录路径 (默认: /)")
+    action_grp = p_dedup.add_mutually_exclusive_group()
+    action_grp.add_argument(
+        "--staging-dir",
+        default=None,
+        help="将冲突副本移动到指定的隔离暂存目录（推荐，如 /videos/movies/pending_delete）",
+    )
+    action_grp.add_argument(
+        "--delete",
+        action="store_true",
+        help="将冲突副本直接删除（服务端移入回收站）",
+    )
+    p_dedup.add_argument("--dry-run", action="store_true", help="仅预演规划，不实际修改网盘")
+    p_dedup.add_argument("-y", "--yes", action="store_true", help="跳过确认提示直接执行")
+    p_dedup.add_argument("-r", "--recursive", action="store_true", help="递归扫描所有子目录")
+    p_dedup.add_argument("--include-orphans", action="store_true", help="处理无主冲突副本组（保留 (1)，清理 (2)+）")
+    p_dedup.add_argument("--include-empty", action="store_true", help="同时扫描并清理空目录")
+    p_dedup.set_defaults(func=cmd_dedup)
 
     return parser
 

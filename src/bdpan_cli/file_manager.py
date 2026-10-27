@@ -322,6 +322,37 @@ class FileManager:
 
         return _validate_filemanager_result(res, err_prefix)
 
+    def batch_delete(
+        self,
+        paths: list[str],
+        batch_size: int = 50,
+    ) -> list[dict[str, Any]]:
+        """批量删除文件或目录（服务端移入回收站）。
+
+        Args:
+            paths: 待删除的文件或目录路径列表。
+            batch_size: 每批请求的最大数量（默认 50，避免接口超时或截断）。
+
+        Returns:
+            各批次成功结果列表。
+        """
+        results: list[dict[str, Any]] = []
+        for i in range(0, len(paths), batch_size):
+            chunk = paths[i : i + batch_size]
+            filelist = json.dumps(chunk, ensure_ascii=False)
+            try:
+                res = self._filemanager_api.filemanagerdelete(
+                    access_token=self.access_token,
+                    _async=0,
+                    filelist=filelist,
+                )
+            except ApiException as e:
+                raise FileManagerError(f"批量删除批次 {i // batch_size + 1} 失败: {e.status} {e.body}") from e
+
+            _validate_filemanager_result(res, f"批量删除批次 {i // batch_size + 1} 返回错误")
+            results.append(res)
+        return results
+
     def delete(self, path: str) -> dict[str, Any]:
         """删除单个文件或目录。"""
         filelist = json.dumps([path], ensure_ascii=False)

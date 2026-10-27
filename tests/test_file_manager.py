@@ -283,6 +283,33 @@ def test_delete_success_without_info():
     assert res.get("errno") == 0
 
 
+def test_batch_delete():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagerdelete.return_value = {"errno": 0}
+
+    res = mgr.batch_delete(["/test/path1", "/test/path2"], batch_size=50)
+    assert len(res) == 1
+    assert res[0]["errno"] == 0
+    call_args = mgr._filemanager_api.filemanagerdelete.call_args[1]
+    assert call_args["access_token"] == "fake-token"
+    assert call_args["filelist"] == '["/test/path1", "/test/path2"]'
+
+
+def test_batch_delete_chunking():
+    mock_client = MagicMock()
+    mgr = FileManager("fake-token", mock_client)
+    mgr._filemanager_api = MagicMock()
+    mgr._filemanager_api.filemanagerdelete.return_value = {"errno": 0}
+
+    paths = [f"/path_{i}" for i in range(105)]
+    res = mgr.batch_delete(paths, batch_size=50)
+    assert len(res) == 3
+    assert mgr._filemanager_api.filemanagerdelete.call_count == 3
+
+
+
 
 def test_search_forwards_params():
     mock_client = MagicMock()

@@ -546,3 +546,82 @@ def test_cli_upload_missing_local_file(tmp_path, capsys):
         exit_code = main(["upload", str(tmp_path / "nope.bin"), "/dst/"])
         assert exit_code == 1
         assert "本地文件不存在" in capsys.readouterr().out
+
+
+def test_cli_dedup_no_duplicates(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [
+            {"server_filename": "single.mkv", "path": "/movies/single.mkv", "isdir": 0, "size": 100}
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["dedup", "/movies"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "未发现任何冲突副本或重复条目" in captured.out
+
+
+def test_cli_dedup_dry_run(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [
+            {"server_filename": "film.mkv", "path": "/movies/film.mkv", "isdir": 0, "size": 1000},
+            {"server_filename": "film (1).mkv", "path": "/movies/film (1).mkv", "isdir": 0, "size": 1000},
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["dedup", "/movies", "--dry-run"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "发现 1 个冲突与重复条目" in captured.out
+        assert "film (1).mkv" in captured.out
+        assert "--dry-run 预演模式" in captured.out
+        mock_mgr.batch_move.assert_not_called()
+        mock_mgr.batch_delete.assert_not_called()
+
+
+def test_cli_dedup_staging_with_yes(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [
+            {"server_filename": "film.mkv", "path": "/movies/film.mkv", "isdir": 0, "size": 1000},
+            {"server_filename": "film (1).mkv", "path": "/movies/film (1).mkv", "isdir": 0, "size": 1000},
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["dedup", "/movies", "--staging-dir", "/movies/pending_delete", "-y"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "已成功将 1 项移入隔离目录: /movies/pending_delete" in captured.out
+        mock_mgr.batch_move.assert_called_once_with(
+            [("/movies/film (1).mkv", "/movies/pending_delete", "film (1).mkv")],
+            batch_size=50,
+        )
+
+
+def test_cli_dedup_delete_with_yes(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [
+            {"server_filename": "film.mkv", "path": "/movies/film.mkv", "isdir": 0, "size": 1000},
+            {"server_filename": "film (1).mkv", "path": "/movies/film (1).mkv", "isdir": 0, "size": 1000},
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["dedup", "/movies", "--delete", "-y"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "已成功从网盘删除 1 项（已移入回收站）" in captured.out
+        mock_mgr.batch_delete.assert_called_once_with(["/movies/film (1).mkv"], batch_size=50)
+
+
+def test_cli_dedup_same_dir_error(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr_getter.return_value = MagicMock()
+
+        exit_code = main(["dedup", "/movies", "--staging-dir", "/movies"])
+        assert exit_code == 1
+        captured = capsys.readouterr()
+        assert "隔离目录不能与待扫描目录相同" in captured.out
+
