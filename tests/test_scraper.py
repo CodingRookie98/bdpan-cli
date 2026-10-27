@@ -145,3 +145,56 @@ def test_search_movie_prioritizes_release_year(mock_http):
     assert meta.year == "2019"
     assert meta.imdb_id == "tt6139732"
 
+
+def test_parse_folder_name_leading_index_and_tags():
+    scraper = MovieScraper()
+    parsed = scraper.parse_folder_name("06 玩具总动员4（2019）台英双语、外挂中英4K")
+    assert parsed["year"] == "2019"
+    assert parsed["zh_title"] == "玩具总动员4"
+    # 不应该被提取为类似于 '06 4（2019） 、 4K' 这种噪声
+    assert parsed["en_title"] is None
+
+
+@patch.object(MovieScraper, "_http_get")
+def test_extract_detail_meta_ignores_non_english_gb_translation(mock_http):
+    mock_http.side_effect = [
+        {
+            "movie_results": [
+                {
+                    "id": 862,
+                    "title": "玩具总动员",
+                    "original_title": "Toy Story",
+                    "release_date": "1995-10-30",
+                }
+            ]
+        },
+        {
+            "id": 862,
+            "title": "玩具总动员",
+            "original_title": "Toy Story",
+            "release_date": "1995-10-30",
+            "external_ids": {"imdb_id": "tt0114709"},
+            "translations": {
+                "translations": [
+                    {
+                        "iso_3166_1": "GB",
+                        "iso_639_1": "cy",
+                        "data": {"title": "Tylwyth Teganau"},
+                    },
+                    {
+                        "iso_3166_1": "US",
+                        "iso_639_1": "en",
+                        "data": {"title": ""},
+                    },
+                ]
+            },
+        },
+    ]
+    scraper = MovieScraper()
+    meta = scraper.fetch_by_imdb_id("tt0114709")
+    assert meta is not None
+    assert meta.title == "玩具总动员"
+    assert meta.original_title == "Toy Story"
+    assert meta.formatted_name == "玩具总动员.Toy.Story.1995.tt0114709"
+
+

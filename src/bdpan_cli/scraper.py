@@ -99,6 +99,7 @@ class MovieScraper:
         # 0. 清理前缀包装，如 "热门 [极速车王 2019]" 与推广后缀 "@公众号..."
         cleaned_name = re.sub(r"@.*$", "", name)
         cleaned_name = re.sub(r"【.*?】", " ", cleaned_name)
+        cleaned_name = re.sub(r"^\s*\d{1,2}[\s._\-]+", "", cleaned_name)
         if re.match(r"^(热门|电影|推荐|资源|分享)\s*\[", cleaned_name):
             bracket_m = re.search(r"\[(.*?)\]", cleaned_name)
             if bracket_m:
@@ -160,45 +161,43 @@ class MovieScraper:
         text = re.sub(r"\[.*?\]|\(.*?\)", " ", cleaned_name)
         text = re.sub(r"[._]+", " ", text)
 
-        en_title = None
-        if year and year in text:
-            parts = text.split(year)
-            before = parts[0].strip()
-            after = parts[1].strip() if len(parts) > 1 else ""
-            if before:
-                cand = noise_pattern.sub(" ", before)
-                cand = re.sub(r"[\u4e00-\u9fa5·：:]+", " ", cand)
-                cand = re.sub(r"[-@][A-Za-z0-9_]+$", "", cand)
-                if " - " in cand:
-                    after_dash = cand.split(" - ")[-1].strip()
-                    if after_dash and re.search(r"[A-Za-z]", after_dash):
-                        cand = after_dash
-                # 剔除末尾语种标识（如 JAPANESE, KOREAN 等）
-                cand = re.sub(r"\b(JAPANESE|KOREAN|GERMAN|FRENCH|ITALIAN|RUSSIAN|CHINESE)\b", " ", cand, flags=re.I)
-                words = " ".join(cand.split())
-                if words and (re.search(r"[A-Za-z]", words) or (words.isdigit() and words != year)):
-                    en_title = words
-            elif after:
-                cand = noise_pattern.sub(" ", after)
-                cand = re.sub(r"[\u4e00-\u9fa5·：:]+", " ", cand)
-                cand = re.sub(r"[-@][A-Za-z0-9_]+$", "", cand)
-                cand = re.sub(r"\b(JAPANESE|KOREAN|GERMAN|FRENCH|ITALIAN|RUSSIAN|CHINESE)\b", " ", cand, flags=re.I)
-                words = " ".join(cand.split())
-                if words and (re.search(r"[A-Za-z]", words) or (words.isdigit() and words != year)):
-                    en_title = words
-
-        if not en_title:
-            noise_m = noise_pattern.search(text)
-            cand = text[:noise_m.start()] if noise_m else text
-            cand = re.sub(r"[\u4e00-\u9fa5·：:]+", " ", cand)
+        def _clean_cand(raw: str) -> str:
+            cand = noise_pattern.sub(" ", raw)
+            cand = re.sub(r"[\u4e00-\u9fa5·：:（\(\)）\[\]【】、]+", " ", cand)
             cand = re.sub(r"[-@][A-Za-z0-9_]+$", "", cand)
             if " - " in cand:
                 after_dash = cand.split(" - ")[-1].strip()
                 if after_dash and re.search(r"[A-Za-z]", after_dash):
                     cand = after_dash
             cand = re.sub(r"\b(JAPANESE|KOREAN|GERMAN|FRENCH|ITALIAN|RUSSIAN|CHINESE)\b", " ", cand, flags=re.I)
-            words = " ".join(cand.split())
-            if words and (re.search(r"[A-Za-z]", words) or words.isdigit()):
+            return " ".join(cand.split())
+
+        def _is_valid_en(w: str) -> bool:
+            if not w:
+                return False
+            has_word = bool(re.search(r"\b[A-Za-z]{2,}\b", w))
+            is_valid_num = bool(w.isdigit() and len(w) >= 3 and w != year)
+            return has_word or is_valid_num
+
+        en_title = None
+        if year and year in text:
+            parts = text.split(year)
+            before = parts[0].strip()
+            after = parts[1].strip() if len(parts) > 1 else ""
+            if before:
+                words = _clean_cand(before)
+                if _is_valid_en(words):
+                    en_title = words
+            elif after:
+                words = _clean_cand(after)
+                if _is_valid_en(words):
+                    en_title = words
+
+        if not en_title:
+            noise_m = noise_pattern.search(text)
+            cand_raw = text[:noise_m.start()] if noise_m else text
+            words = _clean_cand(cand_raw)
+            if _is_valid_en(words):
                 en_title = words
 
         return {
@@ -247,11 +246,15 @@ class MovieScraper:
         en_trans_title = None
         for t in trans_list:
             iso = t.get("iso_3166_1")
+            iso_lang = t.get("iso_639_1")
             data = t.get("data", {})
-            if iso == "CN" and (data.get("title") or data.get("name")):
-                zh_trans_title = data.get("title") or data.get("name")
-            elif iso in ("US", "GB") and (data.get("title") or data.get("name")):
-                en_trans_title = data.get("title") or data.get("name")
+            title_or_name = (data.get("title") or data.get("name") or "").strip()
+            if not title_or_name:
+                continue
+            if (iso == "CN" or iso_lang == "zh") and not zh_trans_title:
+                zh_trans_title = title_or_name
+            elif iso in ("US", "GB") and iso_lang == "en" and not en_trans_title:
+                en_trans_title = title_or_name
 
         # 决定中文名
         zh_title = (
@@ -271,16 +274,31 @@ class MovieScraper:
                 zh_title = douban_zh
 
         # 决定英文名 / 原名
-        orig_title = detail.get("original_title") or detail.get("original_name") or item.get("original_title") or item.get("original_name") or ""
-        # 英文名策略：必须为拉丁字母/英文；如果原名是非拉丁字母（韩文/日文假名/俄文），优先选用英文译名或 fallback_en
-        if en_trans_title and re.search(r"[A-Za-z]", en_trans_title):
-            en_title = en_trans_title
-        elif fallback_en and re.search(r"[A-Za-z]", fallback_en):
-            en_title = fallback_en
-        elif orig_title and re.search(r"[A-Za-z]", orig_title) and not re.search(r"[\uAC00-\uD7A3\u3040-\u30FF\u0400-\u04FF\u4E00-\u9FA5]", orig_title):
+        orig_title = (
+            detail.get("original_title")
+            or detail.get("original_name")
+            or item.get("original_title")
+            or item.get("original_name")
+            or ""
+        ).strip()
+        is_orig_latin = bool(
+            orig_title
+            and re.search(r"[A-Za-z]", orig_title)
+            and not re.search(r"[\uAC00-\uD7A3\u3040-\u30FF\u0400-\u04FF\u4E00-\u9FA5]", orig_title)
+        )
+
+        # 英文名策略：
+        # 1. 若原名本身就是拉丁/英文原名（如 Toy Story, Contact），直接采信原名
+        if is_orig_latin:
             en_title = orig_title
+        # 2. 否则优先选用经校验为英语的翻译名称
+        elif en_trans_title and re.search(r"[A-Za-z]", en_trans_title):
+            en_title = en_trans_title
+        # 3. 再次选用有效英文 fallback_en
+        elif fallback_en and re.search(r"\b[A-Za-z]{2,}\b", fallback_en):
+            en_title = fallback_en
         else:
-            en_title = en_trans_title or fallback_en or orig_title
+            en_title = en_trans_title or orig_title or fallback_en or ""
 
         return MovieMetadata(
             title=zh_title,
