@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 from bdpan_cli.file_manager import FileManager
+from bdpan_cli.preview_scrape import is_already_conforming
 from bdpan_cli.scraper import MovieScraper
 
 logger = logging.getLogger(__name__)
@@ -25,42 +26,81 @@ MEDIA_EXTENSIONS = {
     ".rar",
 }
 
+SUBTITLE_EXTENSIONS = {
+    ".srt",
+    ".ass",
+    ".sub",
+    ".vtt",
+}
+
+ALLOWED_EXTENSIONS = MEDIA_EXTENSIONS | SUBTITLE_EXTENSIONS
+
 
 def plan_foldering(
     dir_path: str,
     mgr: FileManager,
     scraper: MovieScraper | None = None,
 ) -> list[dict[str, Any]]:
-    """扫描目标目录下散落的音视频与压缩包文件，生成方案 A 规范目录归集计划。
+    """扫描目标目录下散落的音视频、字幕与非规范子目录，生成方案 A 规范目录归集计划。
 
     返回列表中的每一项表示一个待创建的独立电影目录及归入其中的文件清单。
     """
     if scraper is None:
         scraper = MovieScraper()
 
-    logger.info("正在扫描目录 %s 中的散落文件...", dir_path)
+    logger.info("正在扫描目录 %s 中的待整理媒体与子目录...", dir_path)
     entries = mgr.list_dir(dir_path)
 
-    # 1. 过滤散落媒体文件（忽略已经是子目录的条目）
-    media_entries = []
+    # 1. 过滤散落媒体文件与非规范子目录
+    media_groups: list[dict[str, Any]] = []
     for item in entries:
         if item.get("isdir") == 1:
-            continue
-        fname = item.get("server_filename", "")
-        _, ext = os.path.splitext(fname)
-        if ext.lower() in MEDIA_EXTENSIONS:
-            media_entries.append(item)
+            subdir_name = item.get("server_filename", "")
+            # 若子目录已经严格符合方案 A 规范，跳过不处理
+            if is_already_conforming(subdir_name):
+                continue
+            # 否则扫描非规范子目录内部的媒体文件与字幕
+            sub_path = item.get("path", f"{dir_path}/{subdir_name}")
+            try:
+                sub_entries = mgr.list_dir(sub_path)
+            except Exception as e:
+                logger.warning("扫描子目录失败 [%s]: %s", subdir_name, e)
+                continue
 
-    logger.info("共发现 %d 个待整理媒体文件", len(media_entries))
+            sub_media = []
+            for sub_item in sub_entries:
+                if sub_item.get("isdir") == 1:
+                    continue
+                sfname = sub_item.get("server_filename", "")
+                _, sext = os.path.splitext(sfname)
+                if sext.lower() in ALLOWED_EXTENSIONS:
+                    sub_media.append(sub_item)
+
+            if sub_media:
+                media_groups.append({
+                    "query_name": subdir_name,
+                    "files": sub_media,
+                    "source_dir": sub_path,
+                })
+        else:
+            fname = item.get("server_filename", "")
+            _, ext = os.path.splitext(fname)
+            if ext.lower() in ALLOWED_EXTENSIONS:
+                base_name, _ = os.path.splitext(fname)
+                media_groups.append({
+                    "query_name": base_name,
+                    "files": [item],
+                    "source_dir": None,
+                })
+
+    logger.info("共发现 %d 组待整理媒体项", len(media_groups))
 
     # 2. 逐一识别并匹配方案 A 规范目录名
     folder_groups: dict[str, list[dict[str, Any]]] = {}
 
-    for item in media_entries:
-        fname = item.get("server_filename", "")
-        fpath = item.get("path", f"{dir_path}/{fname}")
-        base_name, _ = os.path.splitext(fname)
-
+    for group in media_groups:
+        query_name = group["query_name"]
+        base_name, _ = os.path.splitext(query_name)
         is_trailer = bool(re.search(r"Theatrical\s*Trailer|Trailer|预告片?", base_name, re.IGNORECASE))
         query = base_name
         if is_trailer:
@@ -85,12 +125,15 @@ def plan_foldering(
         if target_name not in folder_groups:
             folder_groups[target_name] = []
 
-        folder_groups[target_name].append({
-            "filename": fname,
-            "path": fpath,
-            "size": item.get("size", 0),
-            "is_trailer": is_trailer,
-        })
+        for f_item in group["files"]:
+            fname = f_item.get("server_filename", "")
+            fpath = f_item.get("path", f"{dir_path}/{fname}")
+            folder_groups[target_name].append({
+                "filename": fname,
+                "path": fpath,
+                "size": f_item.get("size", 0),
+                "is_trailer": is_trailer,
+            })
 
     # 3. 组织为计划清单
     plan: list[dict[str, Any]] = []
