@@ -2,6 +2,15 @@
 
 > 记录每次交付的功能与文档演进。格式：日期 + 版本 + 变更摘要。
 
+## 2026-10-27
+
+- **feat(cli)**: 网盘冲突副本与重复文件治理命令（BK-0027）。新增 `dedup` 子命令（`dedup.py`），支持自动识别 `(1)`/`(2)` 冲突后缀、无主编号冗余副本及空目录；提供 `--dry-run` 预演、`--staging-dir` 暂存隔离（防直接误删）与 `--delete` 回收站清理；`FileManager` 新增 `batch_delete` 原语（50 项/批切分 + 逐项 errno 校验）；单元测试 +16，全量测试 110→126。
+- **feat(scrape)**: 散落媒体归集穿透与字幕识别补全（BK-0026）。`foldering.py` `ALLOWED_EXTENSIONS` 扩展支持常见外挂字幕（`.srt`/`.ass`/`.sub`/`.vtt`）；`plan_foldering` 增加对非方案 A 子目录的内部穿透扫描与归集；单元测试 109→110。
+- **fix(cli)**: 目录列表不存在路径与单文件可观测性增强（BK-0025）。`cli.py` `cmd_ls` 在 `list_dir` 返回空列表时主动探测父目录，确认不存在时输出 `❌ 路径不存在: <path>` 并返回退出码 1；当目标为单文件时直接格式化输出文件大小与详情；单元测试 106→109。
+- **fix(scraper)**: 电影刮削器健壮性加固（BK-0024）。`scraper.py` 修复 TMDB translations 遇到英国发售区包含 Welsh (cy) 译名时导致英文原名被威尔士语覆盖的穿透缺陷（严格校验 `iso_639_1 == "en"`）；片名清洗剥除开头的 `01 ` 等序号噪声；单元测试 104→106。
+- **feat(skills)**: 新增 `skills/bdpan-cli/SKILL.md` 智能体专属技能手册，建立环境执行规范、命令速查表、方案 A 刮削标准与常见工作流指引。
+- **ops(media)**: 完成网盘 `/影视/电影` 路径更名（`/videos/movies`，307 部电影目录完全守恒）；完成 `/videos/movies/unscraped` 下《玩具总动员》全系列 7 部作品（含 4K REMUX/mUHD/1080P 多版本与外挂字幕）规范化归集至 `unwatched`，17 个冲突/空目录安全隔离至 `pending_delete`。
+
 ## 2026-10-07
 
 - **feat(cli)**: 大文件分片上传与断点续传（BK-0021）。新增 `Uploader`（`uploader.py`）实现官方三阶段流程：预上传（`autoinit=1`、逐片 4MB 流式 MD5）→ 分片上传（`type=tmpfile`、瞬时失败重试 3 次）→ 创建文件（`block_list`/`uploadid`/`rtype` 与预上传严格一致）；`rtype` 默认 1 冲突自动改名、`--overwrite` 为 3 覆盖。断点续传采用本地状态文件（`.bdpan_uploads.json`，git-ignored）记录 uploadid 与已传分片——真网盘实测服务端不按路径跨 uploadid 记忆分片，恢复时凭原 uploadid 仅补缺失片，uploadid 失效自动回退全新上传。SDK 适配实证：`superfile2` file 参数要求带 `.name` 的 IOBase、分片成功响应无 `errno` 字段、precreate 对本应用在非 `/apps` 路径可用。真网盘 L2：9MB 全新上传大小精确一致；80MB/20 片真中断（kill 进程树）后重跑仅补传 15 片原路径成功；冲突自动改名语义实测；沙箱零残留。测试 98→104。

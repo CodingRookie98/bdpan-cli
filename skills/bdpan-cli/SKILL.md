@@ -41,6 +41,7 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 | `scrape preview` | 电影目录方案 A 刮削更名预览 | `uv run bdpan scrape preview /videos/movies/unwatched` |
 | `scrape apply` | 批量应用刮削重命名映射 | `uv run bdpan scrape apply preview.json --target-dir /videos/movies` |
 | `scrape foldering` | 散落媒体文件自动归集规范目录 | `uv run bdpan scrape foldering /videos/unscraped [--dry-run]` |
+| `dedup` | 冲突副本与重复项治理（支持暂存隔离与清理） | `uv run bdpan dedup /videos/unscraped [--staging-dir /videos/pending_delete] [--dry-run]` |
 
 ---
 
@@ -79,6 +80,17 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
   1. **散落文件归集**：使用 `bdpan scrape foldering /path/unscraped` 将视频、外挂字幕与压缩包自动归集入方案 A 规范新建目录中。
   2. **更名预演**：运行 `bdpan scrape preview <dir> --output preview.json` 生成预演映射表供审阅。
   3. **确认应用**：审阅后运行 `bdpan scrape apply preview.json` 执行实际重命名。
+
+### 3.5 冲突副本治理与重复项清理 (`dedup`)
+在网盘多次上传或合并时，常因重命名规则残留大量形如 `(1)`、`(2)` 的冲突副本或空目录。
+* **冲突检测规则**：
+  * 精确识别 `name (1)`、`name (2)`、`name(1).mkv` 等后缀模式，自动排除 4 位年份数字（如 `(1995)`、`(2021)`）。
+  * 存在主条目时标记为高置信度冲突副本；无主条目时可开启 `--include-orphans` 保留最低序号并标记其余副本；支持 `--include-empty` 扫描并清理空目录。
+* **安全动作**：
+  * 默认/`--dry-run`：仅分析输出待治理清单与总容量统计，不触发任何网盘变更。
+  * `--staging-dir <dir>`：将检测到的冲突副本批量安全移动至隔离暂存目录（如 `/videos/movies/pending_delete`），避免不可逆的直接误删。
+  * `--delete`：直接移入网盘回收站（交互确认或 `-y` 跳过）。
+* **底层批处理**：底层依赖 `FileManager.batch_move` / `FileManager.batch_delete`，严格遵守单批 50 项保护上限。
 
 ---
 
