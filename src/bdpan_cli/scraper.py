@@ -104,8 +104,13 @@ class MovieScraper:
             bracket_m = re.search(r"\[(.*?)\]", cleaned_name)
             if bracket_m:
                 cleaned_name = bracket_m.group(1)
-        # 拆分附着在单词后的分辨率 (如 NoBody2160p -> NoBody 2160p)
-        cleaned_name = re.sub(r"(?<=[A-Za-z])(?=\d{3,4}p\b)", " ", cleaned_name)
+        # 拆分附着在单词或汉字后的分辨率与画质标签 (如 NoBody2160p -> NoBody 2160p, 竖锯4K -> 竖锯 4K)
+        cleaned_name = re.sub(
+            r"(?<=[A-Za-z\u4e00-\u9fa5])(?=(?:4K|2K|8K|\d{3,4}p)\b)",
+            " ",
+            cleaned_name,
+            flags=re.IGNORECASE,
+        )
         # 移除 S01 / S02
         cleaned_name = re.sub(r"\bS\d{1,2}\b", " ", cleaned_name)
         # 移除末尾 Team 标识 (如 PHDTeam)
@@ -133,11 +138,18 @@ class MovieScraper:
                     year = all_years[-1].group(1)
 
         # 3. 提取中文字符串
+        noise_pattern = re.compile(
+            r"\b(1080p|2160p|720p|480p|BluRay|Blu-ray|WEB-DL|WEBRip|HDTV|REMUX|UHD|HDR|DV|DDP\d?\.?\d?|"
+            r"Atmos|x264|x265|HEVC|H264|H265|DTS|AAC|TrueHD|FLAC|10bit|60fps|60FPS|REPACK|EXTENDED|"
+            r"Director'?s\.?Cut|KORSUB|BDRip|WEB|4K|2K|8K|DCP|Theatrical|Trailer|Hi10p|AC3|BD|DOCU|DVD|Re)\b",
+            re.IGNORECASE,
+        )
         cleaned_zh = re.sub(
             r"\[.*?(?:字幕|音轨|版本|高码|帧率|双语|国语|原盘|简|繁|英|4K|1080|2160|蓝光).*?\]|\(.*?(?:字幕|音轨|删减).*?\)",
             " ",
             cleaned_name,
         )
+        cleaned_zh = noise_pattern.sub(" ", cleaned_zh)
         cleaned_zh = re.sub(r"[._]+", " ", cleaned_zh)
         zh_candidates = re.findall(r"[\u4e00-\u9fa50-9：:·\-—]{2,}", cleaned_zh)
         tag_words = {
@@ -152,12 +164,6 @@ class MovieScraper:
                 break
 
         # 4. 提取外文主要名称
-        noise_pattern = re.compile(
-            r"\b(1080p|2160p|720p|480p|BluRay|Blu-ray|WEB-DL|WEBRip|HDTV|REMUX|UHD|HDR|DV|DDP\d?\.?\d?|"
-            r"Atmos|x264|x265|HEVC|H264|H265|DTS|AAC|TrueHD|FLAC|10bit|60fps|60FPS|REPACK|EXTENDED|"
-            r"Director'?s\.?Cut|KORSUB|BDRip|WEB|4K|2K|DCP|Theatrical|Trailer|Hi10p|AC3|BD|DOCU|DVD|Re)\b",
-            re.IGNORECASE,
-        )
         text = re.sub(r"\[.*?\]|\(.*?\)", " ", cleaned_name)
         text = re.sub(r"[._]+", " ", text)
 
@@ -242,7 +248,8 @@ class MovieScraper:
 
         # 解析多语言 translations
         trans_list = detail.get("translations", {}).get("translations", [])
-        zh_trans_title = None
+        zh_cn_title = None
+        zh_other_title = None
         en_trans_title = None
         for t in trans_list:
             iso = t.get("iso_3166_1")
@@ -251,10 +258,14 @@ class MovieScraper:
             title_or_name = (data.get("title") or data.get("name") or "").strip()
             if not title_or_name:
                 continue
-            if (iso == "CN" or iso_lang == "zh") and not zh_trans_title:
-                zh_trans_title = title_or_name
+            if iso == "CN" and not zh_cn_title:
+                zh_cn_title = title_or_name
+            elif iso_lang == "zh" and not zh_other_title:
+                zh_other_title = title_or_name
             elif iso in ("US", "GB") and iso_lang == "en" and not en_trans_title:
                 en_trans_title = title_or_name
+
+        zh_trans_title = zh_cn_title or zh_other_title
 
         # 决定中文名
         zh_title = (

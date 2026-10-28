@@ -198,3 +198,57 @@ def test_extract_detail_meta_ignores_non_english_gb_translation(mock_http):
     assert meta.formatted_name == "玩具总动员.Toy.Story.1995.tt0114709"
 
 
+def test_parse_folder_name_with_4k_attached_to_chinese():
+    scraper = MovieScraper()
+    parsed8 = scraper.parse_folder_name("电锯惊魂8：竖锯4K REMUX (2017)")
+    assert parsed8["zh_title"] == "电锯惊魂8：竖锯"
+    assert parsed8["year"] == "2017"
+
+    parsed9 = scraper.parse_folder_name("电锯惊魂9：漩涡4K")
+    assert parsed9["zh_title"] == "电锯惊魂9：漩涡"
+
+
+@patch.object(MovieScraper, "_http_get")
+def test_extract_detail_meta_prioritizes_cn_over_other_chinese_regions(mock_http):
+    mock_http.side_effect = [
+        {
+            "movie_results": [
+                {
+                    "id": 602734,
+                    "title": "死亡漩渦：奪魂鋸新遊戲",
+                    "original_title": "Spiral: From the Book of Saw",
+                    "release_date": "2021-05-12",
+                }
+            ]
+        },
+        {
+            "id": 602734,
+            "title": "死亡漩渦：奪魂鋸新遊戲",
+            "original_title": "Spiral: From the Book of Saw",
+            "release_date": "2021-05-12",
+            "external_ids": {"imdb_id": "tt10342730"},
+            "translations": {
+                "translations": [
+                    {
+                        "iso_3166_1": "TW",
+                        "iso_639_1": "zh",
+                        "data": {"title": "死亡漩渦：奪魂鋸新遊戲"},
+                    },
+                    {
+                        "iso_3166_1": "CN",
+                        "iso_639_1": "zh",
+                        "data": {"title": "电锯惊魂9：漩涡"},
+                    },
+                ]
+            },
+        },
+    ]
+    scraper = MovieScraper()
+    meta = scraper.fetch_by_imdb_id("tt10342730")
+    assert meta is not None
+    assert meta.title == "电锯惊魂9：漩涡"
+    assert meta.original_title == "Spiral: From the Book of Saw"
+    assert meta.formatted_name == "电锯惊魂9：漩涡.Spiral.From.the.Book.of.Saw.2021.tt10342730"
+
+
+
