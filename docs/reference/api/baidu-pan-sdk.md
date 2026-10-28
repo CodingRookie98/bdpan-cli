@@ -91,14 +91,16 @@ SDK 覆盖 6 个 API 类、19 个接口，统一携带固定查询参数 `openap
 
 ## 3. 本仓库代码映射
 
-| API 类 | SDK 源码路径 | 响应模型 |
-| :--- | :--- | :--- |
-| AuthApi | `vendor/baidu-pan-sdk/openapi_client/api/auth_api.py` | `model/oauth_token_*.py` |
-| FileinfoApi | `vendor/baidu-pan-sdk/openapi_client/api/fileinfo_api.py` | `dict`（`list` 字段为条目数组） |
-| FilemanagerApi | `vendor/baidu-pan-sdk/openapi_client/api/filemanager_api.py` | `dict` |
-| FileuploadApi | `vendor/baidu-pan-sdk/openapi_client/api/fileupload_api.py` | `dict` |
-| MultimediafileApi | `vendor/baidu-pan-sdk/openapi_client/api/multimediafile_api.py` | `dict` |
-| UserinfoApi | `vendor/baidu-pan-sdk/openapi_client/api/userinfo_api.py` | `model/quotaresponse.py`、`model/uinforesponse.py` |
+本仓库自 V1.7.0 起将 SDK 内聚至 `src/bdpan_cli/_vendor/openapi_client`，支持标准 PyPI Wheel/Sdist 打包分发而无需本地相对路径依赖。
+
+| API 类 | 模块引用路径 | 源码文件路径 | 响应模型 |
+| :--- | :--- | :--- | :--- |
+| AuthApi | `bdpan_cli._vendor.openapi_client.api.auth_api` | `src/bdpan_cli/_vendor/openapi_client/api/auth_api.py` | `model/oauth_token_*.py` |
+| FileinfoApi | `bdpan_cli._vendor.openapi_client.api.fileinfo_api` | `src/bdpan_cli/_vendor/openapi_client/api/fileinfo_api.py` | `dict`（`list` 字段为条目数组） |
+| FilemanagerApi | `bdpan_cli._vendor.openapi_client.api.filemanager_api` | `src/bdpan_cli/_vendor/openapi_client/api/filemanager_api.py` | `dict` |
+| FileuploadApi | `bdpan_cli._vendor.openapi_client.api.fileupload_api` | `src/bdpan_cli/_vendor/openapi_client/api/fileupload_api.py` | `dict` |
+| MultimediafileApi | `bdpan_cli._vendor.openapi_client.api.multimediafile_api` | `src/bdpan_cli/_vendor/openapi_client/api/multimediafile_api.py` | `dict` |
+| UserinfoApi | `bdpan_cli._vendor.openapi_client.api.userinfo_api` | `src/bdpan_cli/_vendor/openapi_client/api/userinfo_api.py` | `model/quotaresponse.py`、`model/uinforesponse.py` |
 
 ### 3.1 已核实的参数与响应规格
 

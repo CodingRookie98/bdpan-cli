@@ -6,11 +6,11 @@ import json
 import logging
 from typing import Any
 
-import openapi_client
-from openapi_client.api.fileinfo_api import FileinfoApi
-from openapi_client.api.filemanager_api import FilemanagerApi
-from openapi_client.api.fileupload_api import FileuploadApi
-from openapi_client.rest import ApiException
+from bdpan_cli._vendor import openapi_client
+from bdpan_cli._vendor.openapi_client.api.fileinfo_api import FileinfoApi
+from bdpan_cli._vendor.openapi_client.api.filemanager_api import FilemanagerApi
+from bdpan_cli._vendor.openapi_client.api.fileupload_api import FileuploadApi
+from bdpan_cli._vendor.openapi_client.rest import ApiException
 
 logger = logging.getLogger(__name__)
 

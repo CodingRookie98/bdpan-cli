@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from bdpan_cli.file_manager import FileManager, FileManagerError
-from openapi_client.rest import ApiException
+from bdpan_cli._vendor.openapi_client.rest import ApiException
 
 
 def test_list_dir_pagination():

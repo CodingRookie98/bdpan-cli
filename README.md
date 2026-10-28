@@ -1,49 +1,81 @@
 # bdpan-cli
 
-百度网盘工程化 CLI 管理工具。基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 Python SDK，使用 Python + uv 构建。
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+
+百度网盘工程化 CLI 管理工具。基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 SDK 与协议标准构建，提供文件管理、分片上传续传、冲突副本治理与影视媒体库规范化自动化刮削整理。
+
+---
+
+## 快速安装 (Installation)
+
+### 方式 1：uv tool 安装（推荐，隔离环境）
+```bash
+uv tool install bdpan-cli
+```
+
+### 方式 2：即用即走（无需预先安装）
+```bash
+uvx bdpan-cli --help
+```
+
+### 方式 3：传统 pip 安装
+```bash
+pip install bdpan-cli
+```
+
+### 方式 4：跨平台单文件二进制（免 Python 运行时）
+前往 [GitHub Releases](https://github.com/CodingRookie98/bdpan-cli/releases) 直接下载对应平台单文件二进制可执行包，加入 `PATH` 即可运行：
+- `bdpan-linux-amd64`
+- `bdpan-linux-arm64`
+- `bdpan-macos-arm64` (Apple Silicon)
+- `bdpan-macos-x86_64` (Intel)
+- `bdpan-windows-amd64.exe`
+
+---
 
 ## 命令行使用 (CLI)
 
 ```bash
 # 查看帮助
-uv run bdpan --help
+bdpan --help
 
 # 常用命令
-uv run bdpan ls /影视/电影
-uv run bdpan mkdir /新目录
-uv run bdpan mv <源路径>... <目标目录>          # 多源时目标须为已存在目录
-uv run bdpan cp <源路径>... <目标目录|目标目录/新名>  # 单源支持改名
-uv run bdpan rename <路径> <新名称>
-uv run bdpan rm <路径>... [-y]
-uv run bdpan quota [--check-expire] [--check-free]  # 网盘容量
-uv run bdpan whoami                             # 账户信息
-uv run bdpan search <关键词> [--dir 目录] [--no-recursion]
-uv run bdpan tree <路径> [--depth N] [--index 索引.json]  # 递归树+本地索引
-uv run bdpan upload <本地文件> <目标目录|目标目录/新名> [--overwrite]  # 分片上传+断点续传
-uv run bdpan scrape foldering /影视/电影/unscraped
+bdpan ls /影视/电影
+bdpan mkdir /新目录
+bdpan mv <源路径>... <目标目录>          # 多源时目标须为已存在目录
+bdpan cp <源路径>... <目标目录|目标目录/新名>  # 单源支持改名
+bdpan rename <路径> <新名称>
+bdpan rm <路径>... [-y]
+bdpan quota [--check-expire] [--check-free]  # 网盘容量
+bdpan whoami                             # 账户信息
+bdpan search <关键词> [--dir 目录] [--no-recursion]
+bdpan tree <路径> [--depth N] [--index 索引.json]  # 递归树+本地索引
+bdpan upload <本地文件> <目标目录|目标目录/新名> [--overwrite]  # 分片上传+断点续传
+bdpan dedup /影视/电影 --staging-dir /隔离区      # 治理 (1)/(2) 冲突副本
+bdpan scrape foldering /影视/电影/unscraped       # 媒体库电影散落文件建目录归集
 ```
 
-> `mv` / `cp` 目标双语义：目标为已存在目录（或以 `/` 结尾）→ 移入/复制入内并保持原名；否则按 `目标目录/新名` 移动/复制并改名。`rm` 默认交互确认，`-y` 跳过；网盘删除由服务端移入回收站。
+> **操作安全机制**：`mv` / `cp` 遵循严格目标判定；`rm` 默认交互确认，`-y` 跳过；网盘删除由服务端移入回收站。批量操作支持 `--dry-run` 预演。
 
-## 项目结构
+---
 
-```
-├── docs/                     # 治理文档（Diátaxis 四象限，见 docs/GOVERNANCE.md）
-│   ├── index.md              # 知识库总入口
-│   ├── llms.txt              # AI 智能体机器地图
-│   └── reference/api/        # SDK 接口参考（机器真理源）
-├── pyproject.toml            # 主项目（包 bdpan_cli，入口 bdpan / bdpan-cli）
-├── src/bdpan_cli/            # 业务代码与 CLI 入口
-├── vendor/baidu-pan-sdk/     # 官方 openapi_client SDK 的 vendor 本地包（见其 README）
-├── uv.lock
-└── .python-version           # 3.12
-```
-
-## 开发环境
+## 本地开发环境
 
 ```bash
-uv sync        # 创建 .venv 并安装依赖（含 vendor SDK）
-uv run bdpan
+# 克隆仓库
+git clone https://github.com/CodingRookie98/bdpan-cli.git
+cd bdpan-cli
+
+# 安装依赖
+uv sync
+
+# 本地调试运行
+uv run bdpan --help
+
+# 运行全量测试
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
 ```
 
 ## 应用凭证配置
@@ -54,17 +86,23 @@ uv run bdpan
 cp .env.example .env
 ```
 
-## 使用 SDK
+---
 
-SDK 以可编辑本地包 `baidu-pan-sdk` 依赖引入，直接 `import openapi_client` 即可：
+## 项目结构
 
-```python
-import openapi_client
-from openapi_client.api import userinfo_api
-
-with openapi_client.ApiClient() as api_client:
-    api = userinfo_api.UserinfoApi(api_client)
-    resp = api.apiquota("<access_token>", checkexpire=1, checkfree=1)
+```
+├── docs/                     # 治理文档（Diátaxis 四象限，见 docs/GOVERNANCE.md）
+│   ├── index.md              # 知识库总入口
+│   ├── llms.txt              # AI 智能体机器地图
+│   ├── project/              # 演进路线图 (roadmap.md)、待办 (backlog.md)、计划 (plans/)
+│   └── reference/api/        # SDK 接口参考（机器真理源）
+├── pyproject.toml            # 标准 Python 项目配置与 CLI 命令行入口
+├── src/bdpan_cli/            # 核心业务代码与 CLI 子命令
+│   └── _vendor/              # 内聚内嵌的 OpenAPI Client 依赖包（标准轮子直接打包）
+├── tests/                    # 单元测试与回归套件 (128+ 项全绿)
+└── .python-version           # 3.12
 ```
 
-接入前需在[开放平台控制台](https://pan.baidu.com/union/doc/)完成：注册登录 → 实名认证 → 创建应用 → 授权获取 `access_token`（SDK 的 `AuthApi` 支持授权码模式与设备码模式）。
+## 贡献与开源
+
+详细贡献规范、测试门禁与提交信息格式见 [CONTRIBUTING.md](./CONTRIBUTING.md)。开源许可协议遵循 [MIT License](./LICENSE)。

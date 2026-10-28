@@ -1,13 +1,14 @@
 .agents/skills/
 skills-lock.json
 
-# Python / uv
+# Python / uv / PyInstaller
 .venv/
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
 build/
+*.spec
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
@@ -17,6 +18,9 @@ build/
 *.local.toml
 .baidupan_tokens.json
 *preview.json
+.bdpan_ops/
+.bdpan_uploads.json
+.download_state/
 
 
 # goal-loop 工作状态（协议假定其被忽略）

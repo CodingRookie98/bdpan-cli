@@ -25,9 +25,9 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-import openapi_client
-from openapi_client.api.fileupload_api import FileuploadApi
-from openapi_client.rest import ApiException
+from bdpan_cli._vendor import openapi_client
+from bdpan_cli._vendor.openapi_client.api.fileupload_api import FileuploadApi
+from bdpan_cli._vendor.openapi_client.rest import ApiException
 
 logger = logging.getLogger(__name__)
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-import openapi_client
-from openapi_client.api.userinfo_api import UserinfoApi
-from openapi_client.rest import ApiException
+from bdpan_cli._vendor import openapi_client
+from bdpan_cli._vendor.openapi_client.api.userinfo_api import UserinfoApi
+from bdpan_cli._vendor.openapi_client.rest import ApiException
 
 
 class AccountError(RuntimeError):

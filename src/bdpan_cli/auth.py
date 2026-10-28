@@ -8,9 +8,9 @@ import json
 import time
 from pathlib import Path
 
-import openapi_client
-from openapi_client.api.auth_api import AuthApi
-from openapi_client.rest import ApiException
+from bdpan_cli._vendor import openapi_client
+from bdpan_cli._vendor.openapi_client.api.auth_api import AuthApi
+from bdpan_cli._vendor.openapi_client.rest import ApiException
 
 from bdpan_cli.config import AppConfig
 

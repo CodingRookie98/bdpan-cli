@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          version: "latest"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: L0 Static syntax check
+        run: uv run python -m compileall -q src tests
+
+      - name: L1 Unit tests
+        run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
+
+      - name: Doc links verification
+        run: |
+          python3 .agents/skills/doc-governance/scripts/check-doc-links.py --root docs
+          python3 .agents/skills/doc-governance/scripts/generate-llms-txt.py --root docs --output docs/llms.txt
+
+      - name: Verify build artifact
+        run: uv build

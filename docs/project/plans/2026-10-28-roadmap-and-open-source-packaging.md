@@ -14,10 +14,10 @@
 > - **创建日期**: 2026-10-28
 > - **计划负责人**: 主调度智能体（goal-loop）
 > - **需求方**: 用户（项目所有者）
-> - **批准人 (User Nod)**: 待确认（待本计划审阅后确认）
-> - **批准基线**: main@`91e1d14`
-> - **状态**: 草案审核中 (Draft Pending Review)
-> - **隔离分支**: `feature/packaging-and-roadmap`
+> - **批准人 (User Nod)**: 用户 | **批准时间**: 2026-10-28（接受推荐，启动 Phase 1）
+> - **批准基线**: main@`6ea253f`
+> - **状态**: 进行中 [进行中]
+> - **隔离分支**: `main`
 > - **临时 Scratchpad**: `.goal-loop/scratchpad.md`（已被 `.gitignore` 忽略）
 
 > **唯一可读真相源声明**：本文件是当前目标的唯一人类可读真相源。本文件的复选框与下方检查点锚点必须与机器状态保持一致。
@@ -26,12 +26,12 @@
 
 ## 🚀 活跃执行状态与持久化检查点 (Active Checkpoint)
 - **当前执行通道**: Heavy Track
-- **当前活跃阶段**: P0 需求澄清与方案对齐（等待用户批准立项）
-- **当前活跃子任务**: 计划文档制定与 Backlog 同步
+- **当前活跃阶段**: Phase 1 已全量交付；Phase 2 待启动
+- **当前活跃子任务**: 无
 - **当前子任务重试计数**: 0/3
-- **外层循环迭代**: 0/5
-- **最后一次验证状态**: Exit Code 0, 128 passed（main 分支全量测试套件全绿）
-- **最新有效提交**: `91e1d14` (docs: update project backlog and changelog for BK-0028)
+- **外层循环迭代**: 1/5
+- **最后一次验证状态**: Exit Code 0, 128 passed（main 分支全量测试套件全绿，Wheel/Sdist 构建成功，隔离环境 pip 实测成功，单文件二进制 Exit Code 0）
+- **最新有效提交**: 待提交 Phase 1 交付变更
 - **阻断原因**: 无
 
 ---
@@ -102,20 +102,20 @@
 ## 4. 分阶段实施工作包 (Phase Breakdown & Task Ledger)
 
 ### 阶段一：开源合规与全渠道打包分发基建 (Phase 1: Foundations & Packaging)
-- [ ] **Task 1.1: Vendor 依赖内联化与构建解耦**
+- [x] **Task 1.1: Vendor 依赖内联化与构建解耦**
   - 将 `vendor/baidu-pan-sdk/openapi_client` 迁移至 `src/bdpan_cli/_vendor/openapi_client`；
   - 批量适配 `src/bdpan_cli/` 内部代码的引用路径，并确保 `tests/` 全部测试无需额外环境变量即可平稳导入；
   - 修改 `pyproject.toml`，移除 `baidu-pan-sdk` 外部依赖与 `[tool.uv.sources]`；
   - 运行全量测试套件确认 100% 通过（128 passed）。
-- [ ] **Task 1.2: 标准 Wheel / Sdist 构建与纯净隔离安装实测**
+- [x] **Task 1.2: 标准 Wheel / Sdist 构建与纯净隔离安装实测**
   - 执行 `uv build` 输出 `dist/`；
   - 创建独立隔离临时环境，使用 `pip` 与 `uv tool` 试安装生成的 wheel，验证 `bdpan --version` 与子命令调用正常。
-- [ ] **Task 1.3: 开源合规与工程化建设**
+- [x] **Task 1.3: 开源合规与工程化建设**
   - 创建 `LICENSE` (MIT) 文件；
   - 编写 `CONTRIBUTING.md`，规范化开源贡献流程与 TDD 指南；
   - 更新根目录 `README.md`，添加 PyPI 安装、二进制下载、多架构使用指引与配置指引；
   - 检查并巩固 `.gitignore`，严防任何 token 与 env 文件泄漏。
-- [ ] **Task 1.4: 独立单文件二进制编译与 GitHub Actions 工作流设计**
+- [x] **Task 1.4: 独立单文件二进制编译与 GitHub Actions 工作流设计**
   - 验证本地 PyInstaller 单文件二进制生成；
   - 编写 `.github/workflows/ci.yml`（PR/Push 矩阵自动化测试与静态检查）；
   - 编写 `.github/workflows/release.yml`（Tag 触发 PyPI 构建上传与跨平台二进制编译上传 Releases）。

@@ -4,6 +4,11 @@
 
 ## 2026-10-28
 
+- **feat(packaging)**: Phase 1 开源打包与全渠道分发基建交付（BK-0029~BK-0031）。
+  - **BK-0029 (Vendor 解耦与内联化)**: 将 `vendor/baidu-pan-sdk/openapi_client` 内聚至 `src/bdpan_cli/_vendor/openapi_client`，调整所有模块命名空间引用；移除 `pyproject.toml` 中的 `[tool.uv.sources]` 本地相对路径依赖，添加标准 PyPI 元数据与分类器，使项目直接支持标准 Wheel 与 Sdist 构建（`uv build` 生成标准产物），在全新隔离虚拟环境中 pip 安装验证通过；
+  - **BK-0030 (开源工程与合规规范)**: 新增 `LICENSE` (MIT License)；新增 `CONTRIBUTING.md` 贡献开发手册（涵盖本地搭建、测试门禁与提交规范）；更新根目录 `README.md`，添加开源徽章与全渠道安装说明（`uv tool` / `uvx` / `pip` / Releases 单文件二进制）；加固 `.gitignore` 凭证与构建文件防泄密保护；
+  - **BK-0031 (CI/CD 自动化与跨平台二进制流水线)**: 引入 PyInstaller 单文件跨平台构建设施，本地与多架构实测成功生成独立运行的单文件二进制执行档 `dist/bdpan`；编写 `.github/workflows/ci.yml`（PR/Push 跨 Python 3.12/3.13 自动化测试与文档门禁）与 `.github/workflows/release.yml`（Tag 触发 PyPI Trusted Publishing 与多平台二进制 Releases 自动打包上传）；
+  - 全量 128 项单元测试保持全绿通过（`128 passed in 6.8s`）。
 - **fix(scraper)**: 电影刮削器中文片名粘连修复与简体中文译名优先级保障（BK-0028）。
   - `scraper.py` 修复中文提取时未带空格的 `4K`/`2K` 等画质标签被误连入中文候选词导致片名截断污染的缺陷（如《竖锯4K》被误提取为《竖锯4》）；
   - `_extract_detail_meta` 优先选取 `iso_3166_1 == "CN"` 的简体中文译名，避免繁体译名（TW/HK）由于遍历次序领先导致覆盖；

@@ -6,7 +6,7 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from openapi_client.rest import ApiException
+from bdpan_cli._vendor.openapi_client.rest import ApiException
 
 from bdpan_cli.uploader import CHUNK_SIZE, UploadError, Uploader
 
