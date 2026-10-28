@@ -68,6 +68,14 @@ bdpan auth list                           # 查看本地保存的网盘账号及
 bdpan auth switch <alias>                 # 切换当前默认活跃账号
 bdpan auth login [--account <alias>]      # 登录/重新授权指定账号别名
 bdpan --account <alias> <subcommand>      # 临时以指定账号执行单次命令（多租户并发隔离）
+
+# 媒体可观测性与全局 JSON 信封 (Media Insights & JSON)
+bdpan info /影视/电影/Inception.mkv        # 探测视频精准分辨率(4K/1080P)、时长、HEVC编码与音轨
+bdpan stats /影视/电影 [--depth N]        # 递归聚合统计目录总容量、总文件数及媒体格式分类占比
+bdpan --json <subcommand>                 # 所有核心查询命令支持标准化 JSON 信封输出（脚本化集成）
+
+# AI 原生集成 (Model Context Protocol / MCP)
+bdpan mcp                                 # 启动标准 stdio MCP Server，供 Claude Code / Cursor / AI 智能体调用
 ```
 
 > **操作安全机制**：`mv` / `cp` 遵循严格目标判定；`rm` 默认交互确认，`-y` 跳过；网盘删除由服务端移入回收站。批量操作支持 `--dry-run` 预演；所有破坏性移动更名自动落盘流水审计，支持一键逆向回滚还原。
@@ -112,7 +120,7 @@ cp .env.example .env
 ├── pyproject.toml            # 标准 Python 项目配置与 CLI 命令行入口
 ├── src/bdpan_cli/            # 核心业务代码与 CLI 子命令
 │   └── _vendor/              # 内聚内嵌的 OpenAPI Client 依赖包（标准轮子直接打包）
-├── tests/                    # 单元测试与回归套件 (155+ 项全绿)
+├── tests/                    # 单元测试与回归套件 (170+ 项全绿)
 └── .python-version           # 3.12
 ```
 

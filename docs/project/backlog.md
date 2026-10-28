@@ -1,7 +1,7 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.10.0
+> - **文档版本**: V1.11.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-10-28
 > - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
@@ -12,10 +12,6 @@
 （暂无进行中任务）
 
 ## 计划中 (路线图演进任务)
-
-### 阶段四：媒体可观测性与 AI 原生集成 (Phase 4)
-- [ ] BK-0036 全局结构化输出与媒体深度元数据解析（所有 CLI 子命令支持 `--json` 标准信封输出；新增 `bdpan info <file>` 探测视频编码/分辨率/时长/码率，新增 `bdpan stats <dir>` 目录聚合容量统计）
-- [ ] BK-0037 原生 MCP (Model Context Protocol) Server 集成（实现 `bdpan mcp` 子命令，自省暴露 CLI 能力为标准 MCP Tool Schemas，支持 Claude Code、Antigravity、Cursor 等 AI 编程助手直接编排操作网盘）
 
 ### 文档与规范专项
 - [ ] BK-0023 文档治理体系落地：tutorials / how-to / explanation 象限按需填充
@@ -32,6 +28,8 @@
 
 ## 已关闭
 
+- [x] BK-0037 原生 MCP (Model Context Protocol) Server 集成（新增 `mcp_server.py` 与 `bdpan mcp` 子命令，基于标准 stdio 纯净实现 JSON-RPC 2.0 协议生命周期 initialize/ping/tools/list/tools/call，自省暴露网盘 14 项核心文件管理与可观测性 Tool Schemas，支持 Claude Code、Antigravity、Cursor 直接调用；单测全绿，2026-10-28）
+- [x] BK-0036 全局结构化输出与媒体深度元数据解析（所有核心查询命令支持 `--json` 标准化信封输出；新增 `MediaInfoClient` 模块与 `bdpan info`、`bdpan stats` 命令，支持视频精准分辨率 4K/1080P、时长、HEVC/H.264 编码、音轨探测与目录容量分类聚合统计；单测全绿，2026-10-28）
 - [x] BK-0035 多账号认证管理与动态切换（升级 TokenManager 支持多账号别名存储与自动平滑迁移旧单账号缓存；新增 `bdpan auth list/switch/login` 子命令，CLI 根命令新增全局 `--account <alias>` 参数支持多网盘账号隔离与即时切换；单测验证通过，2026-10-28）
 - [x] BK-0034 操作流水审计与逆向撤销体系（本地落盘 `.bdpan_ops/<op_id>.json` 结构化记录批量更名/移动操作映射清单；新增 `bdpan ops list/show` 以及 `bdpan undo <op_id>` 逆向撤销命令，支持 `--dry-run` 预览与一键安全复原；单测覆盖正向记录与逆向撤销，2026-10-28）
 - [x] BK-0033 极速秒传机制与动态最优机房接入（大文件上传 `precreate` 命中 `return_type == 2` 时跳过分片上传直接创建，0 流量瞬间完成；新增 `locate_upload_host` 动态获取最优上传服务器 host，单测验证通过，2026-10-28）

@@ -4,6 +4,10 @@
 
 ## 2026-10-28
 
+- **feat(insights-ai)**: Phase 4 媒体可观测性与 AI 原生集成交付（BK-0036~BK-0037）。
+  - **BK-0036 (全局结构化输出与媒体深度元数据解析)**: 引入 `MediaInfoClient`（`media_info.py`）与 `bdpan info`、`bdpan stats` 终端命令；`info` 支持通过网盘 `xpanmultimediafilemetas` 接口探测视频分辨率标称（如 `3840x2160 (4K UHD)` / `1080P FHD`）、时长 `HH:MM:SS`、HEVC/H.264 视频编码与音轨数；`stats` 递归聚合统计目录总容量、总文件数及媒体格式占比；所有核心查询命令支持 `--json` 输出标准化结构化信封，方便第三方脚本化消费；
+  - **BK-0037 (原生 MCP Server 模式集成)**: 新增 `BdpanMcpServer`（`mcp_server.py`）与 `bdpan mcp` 终端命令；基于轻量零重量外部依赖的纯净 Python 协议栈原生实现 Model Context Protocol (MCP) 与 JSON-RPC 2.0 完整生命周期（`initialize`、`ping`、`tools/list`、`tools/call`）；自省暴露网盘 14 项核心文件操作与可观测性 Tool Schemas，支持 Claude Code、Antigravity、Cursor 等 AI 编程助手直接配置调用；
+  - 全量测试套件从 155 项扩充至 170 项全绿通过（`170 passed in 6.00s`）。
 - **feat(safety)**: Phase 3 安全运维体系与多账号隔离交付（BK-0034~BK-0035）。
   - **BK-0034 (操作流水审计与逆向撤销体系)**: 新增 `ops.py`（`OperationLogger` 与 `UndoEngine`）以及 `bdpan ops`、`bdpan undo` 终端命令；所有批量更名、批量移动、归集等关键操作原子落盘结构化审计日志至 `.bdpan_ops/<op_id>.json`（包含时间、命令、账号、操作前后映射路径）；`ops list` / `ops show` 查阅历史流水；`undo <op_id>` 逆向解析操作对并基于 `FileManager.batch_move` 执行逆向回滚，支持 `--dry-run` 预览回滚与一键安全复原，状态自动标记 `undone` 防止重复执行；
   - **BK-0035 (多账号认证管理与动态切换)**: 重构升级 `TokenManager`（`auth.py`），支持以账号别名存储多套凭证，并自动平滑升级旧单账号缓存文件；新增 `bdpan auth list`、`bdpan auth switch <alias>`、`bdpan auth login [--account <alias>]` 子命令；CLI 根命令新增全局 `--account <alias>` 参数，支持单次命令动态指定网盘租户；

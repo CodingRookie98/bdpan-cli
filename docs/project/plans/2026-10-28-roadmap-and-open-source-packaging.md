@@ -26,12 +26,12 @@
 
 ## 🚀 活跃执行状态与持久化检查点 (Active Checkpoint)
 - **当前执行通道**: Heavy Track
-- **当前活跃阶段**: Phase 3 已全量交付；Phase 4 待启动
+- **当前活跃阶段**: Phase 4 已全量交付；全四阶段宏观演进大圆满达成
 - **当前活跃子任务**: 无
 - **当前子任务重试计数**: 0/3
-- **外层循环迭代**: 3/5
-- **最后一次验证状态**: Exit Code 0, 155 passed（main 分支全量测试套件全绿，ops/undo 流水撤销与 auth/--account 多账号全部交付）
-- **最新有效提交**: 待提交 Phase 3 交付变更
+- **外层循环迭代**: 4/5
+- **最后一次验证状态**: Exit Code 0, 170 passed（main 分支全量测试套件全绿，--json信封、info深度元数据、stats聚合统计与原生MCP Server全部交付）
+- **最新有效提交**: 待提交 Phase 4 交付变更
 - **阻断原因**: 无
 
 ---
@@ -156,13 +156,13 @@
 ---
 
 ### 阶段四：媒体可观测性与 AI/MCP 机器接入 (Phase 4: Media Insights & AI/MCP)
-- [ ] **Task 4.1: 全局支持 `--json` 输出信封**
+- [x] **Task 4.1: 全局支持 `--json` 输出信封**
   - 设计统一的 JSON 响应格式规范；
   - 为所有子命令注入 `--json` 开关，方便自动化脚本与外部程序管道消费。
-- [ ] **Task 4.2: 媒体元数据与目录聚合 (`bdpan info` & `bdpan stats`)**
+- [x] **Task 4.2: 媒体元数据与目录聚合 (`bdpan info` & `bdpan stats`)**
   - 实现 `bdpan info` 查询媒体文件的编码、分辨率、时长等元数据；
   - 实现 `bdpan stats` 快速输出目录层级、文件数与容量分布。
-- [ ] **Task 4.3: 原生 MCP Server 模式集成 (`bdpan mcp`)**
+- [x] **Task 4.3: 原生 MCP Server 模式集成 (`bdpan mcp`)**
   - 引入 FastMCP 协议适配器，自省导出网盘 CLI 操作为标准 MCP 工具集；
   - 支持各类 AI 编程助手（Claude Code、Antigravity、Cursor）直接配置本 CLI 作为工具。
 

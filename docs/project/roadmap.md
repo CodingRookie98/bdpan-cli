@@ -116,14 +116,14 @@
 
 ### 阶段四：媒体可观测性与 AI 原生集成 (Phase 4: Media Insights & AI/MCP)
 **目标**：深化媒体专业管理能力，全面拥抱 Agentic AI 生态。
-- [ ] **媒体深度元数据解析 (`bdpan info`)**：
+- [x] **媒体深度元数据解析 (`bdpan info`)**：
   - 对网盘视频文件获取准确的编码格式（H.264/HEVC/AV1）、分辨率、音轨数、时长与码率；
   - 辅助刮削器更智能地识别画质等级与音效标准。
-- [ ] **目录聚合与容量统计 (`bdpan stats`)**：
+- [x] **目录聚合与容量统计 (`bdpan stats`)**：
   - 轻量化快速统计指定网盘目录的文件总量、总大小、媒体格式占比与拓扑深度。
-- [ ] **全局结构化输出与机器信封 (`--json`)**：
+- [x] **全局结构化输出与机器信封 (`--json`)**：
   - 所有 CLI 子命令均支持 `--json` 输出模式，输出标准化的 `{ "code": 0, "data": ..., "msg": "ok" }` 信封，便于管道与脚本解析。
-- [ ] **原生 MCP (Model Context Protocol) Server 模式 (`bdpan mcp`)**：
+- [x] **原生 MCP (Model Context Protocol) Server 模式 (`bdpan mcp`)**：
   - 封装 FastMCP 服务端，自省导出网盘操作的 Tool Schemas；
   - 允许大语言模型助手通过标准 MCP 协议直接调用网盘列举、搜索、下载、移动与整理等能力。
 

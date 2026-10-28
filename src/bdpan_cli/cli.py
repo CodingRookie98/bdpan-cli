@@ -17,6 +17,8 @@ from bdpan_cli.dedup import execute_dedup, plan_dedup
 from bdpan_cli.downloader import DownloadError, Downloader
 from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
+from bdpan_cli.media_info import MediaInfoClient, MediaInfoError
+from bdpan_cli.mcp_server import BdpanMcpServer
 from bdpan_cli.ops import OperationLogger, UndoEngine, UndoError
 from bdpan_cli.preview_scrape import generate_preview
 from bdpan_cli.uploader import Uploader
@@ -27,6 +29,18 @@ logger = logging.getLogger("bdpan_cli.cli")
 
 # 断点续传状态文件：与 token 缓存同目录（项目根，git-ignored）
 UPLOAD_STATE_FILE = TOKEN_CACHE.parent / ".bdpan_uploads.json"
+
+
+def _output_envelope(data: Any = None, success: bool = True, code: int = 0, error: str | None = None) -> int:
+    """输出标准结构化 JSON 信封，适用于 --json 模式。"""
+    payload = {
+        "success": success,
+        "code": code,
+        "data": data,
+        "error": error,
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    return code
 
 
 def _get_token_manager(args: argparse.Namespace | None = None) -> TokenManager:
@@ -48,6 +62,11 @@ def _get_account_client(args: argparse.Namespace | None = None) -> AccountClient
 def _get_downloader(args: argparse.Namespace | None = None) -> Downloader:
     token = _get_token_manager(args).get_access_token()
     return Downloader(token)
+
+
+def _get_media_info_client(args: argparse.Namespace | None = None) -> MediaInfoClient:
+    token = _get_token_manager(args).get_access_token()
+    return MediaInfoClient(token)
 
 
 def _format_size(size_bytes: int) -> str:
@@ -81,14 +100,21 @@ def cmd_ls(args: argparse.Namespace) -> int:
                 None,
             )
             if not match:
+                if getattr(args, "json", False):
+                    return _output_envelope(None, success=False, code=1, error=f"路径不存在: {path}")
                 print(f"❌ 路径不存在: {path}")
                 return 1
             if match.get("isdir") != 1:
+                if getattr(args, "json", False):
+                    return _output_envelope([match])
                 size_str = _format_size(match.get("size", 0))
                 print(f"\n📄 文件: {path} ({size_str})\n")
                 return 0
         except FileManagerError:
             pass
+
+    if getattr(args, "json", False):
+        return _output_envelope(entries)
 
     dirs = [e for e in entries if e.get("isdir") == 1]
     files = [e for e in entries if e.get("isdir") != 1]
@@ -257,6 +283,9 @@ def cmd_search(args: argparse.Namespace) -> int:
         page=args.page,
         num=args.num,
     )
+    if getattr(args, "json", False):
+        return _output_envelope(entries)
+
     if not entries:
         print(f"🔍 未找到与「{args.key}」匹配的条目。")
         return 0
@@ -428,6 +457,8 @@ def _format_vip(vip_type: Any) -> str:
 def cmd_quota(args: argparse.Namespace) -> int:
     client = _get_account_client(args)
     res = client.quota(check_expire=args.check_expire, check_free=args.check_free)
+    if getattr(args, "json", False):
+        return _output_envelope(res)
     total = int(res.get("total") or 0)
     used = int(res.get("used") or 0)
     print("💾 网盘容量:")
@@ -447,6 +478,8 @@ def cmd_quota(args: argparse.Namespace) -> int:
 def cmd_whoami(args: argparse.Namespace) -> int:
     client = _get_account_client(args)
     res = client.user_info()
+    if getattr(args, "json", False):
+        return _output_envelope(res)
     print("👤 网盘账户信息:")
     print(f"  百度账号: {res.get('baidu_name') or '-'}")
     print(f"  网盘名:   {res.get('netdisk_name') or '-'}")
@@ -629,6 +662,10 @@ def cmd_ops(args: argparse.Namespace) -> int:
 
     if subcmd == "show":
         op = logger_instance.get_operation(args.op_id)
+        if getattr(args, "json", False):
+            if not op:
+                return _output_envelope(None, success=False, code=1, error=f"未找到操作流水: {args.op_id}")
+            return _output_envelope(op)
         if not op:
             print(f"❌ 未找到操作流水: {args.op_id}", file=sys.stderr)
             return 1
@@ -650,6 +687,8 @@ def cmd_ops(args: argparse.Namespace) -> int:
     # 默认 list
     limit = getattr(args, "limit", 20) or 20
     ops = logger_instance.list_operations(limit=limit)
+    if getattr(args, "json", False):
+        return _output_envelope(ops)
     if not ops:
         print("📜 暂无操作审计流水。")
         return 0
@@ -744,6 +783,8 @@ def cmd_auth(args: argparse.Namespace) -> int:
     # 默认 list
     accounts = tm.list_accounts()
     active = tm.get_active_account()
+    if getattr(args, "json", False):
+        return _output_envelope({"current": active, "accounts": accounts})
     print("\n🔑 本地网盘账号认证列表:")
     print("-" * 65)
     if not accounts:
@@ -761,6 +802,68 @@ def cmd_auth(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_info(args: argparse.Namespace) -> int:
+    """探测视频与多媒体文件的深度元数据。"""
+    mc = _get_media_info_client(args)
+    path = args.path
+    try:
+        info = mc.get_media_info(path)
+    except MediaInfoError as e:
+        if getattr(args, "json", False):
+            return _output_envelope(None, success=False, code=1, error=str(e))
+        print(f"❌ 解析失败: {e}", file=sys.stderr)
+        return 1
+
+    if getattr(args, "json", False):
+        return _output_envelope(info)
+
+    print(f"\n🎬 媒体元数据 [{info['filename']}]:")
+    print(f"  文件路径: {info['path']}")
+    print(f"  文件大小: {_format_size(info['size'])}")
+    print(f"  媒体分类: {info['category']}")
+    if info["is_video"]:
+        print(f"  视频分辨率: {info['resolution']}")
+        print(f"  视频时长:   {info['duration_formatted']} ({info['duration_seconds']} 秒)")
+        print(f"  视频编码:   {info['video_codec']}")
+        print(f"  包含音轨:   {info['audio_tracks_count']} 条")
+    print(f"  MD5 校验值: {info.get('md5') or '-'}\n")
+    return 0
+
+
+def cmd_stats(args: argparse.Namespace) -> int:
+    """递归聚合统计目录下的容量、文件数与媒体分类分布。"""
+    mc = _get_media_info_client(args)
+    path = args.path or "/"
+    stats = mc.get_dir_stats(path, max_depth=args.depth)
+    if getattr(args, "json", False):
+        return _output_envelope(stats)
+
+    print(f"\n📊 目录聚合统计 [{stats['root']}]:")
+    print(f"  总容量: {_format_size(stats['total_size'])}")
+    print(f"  文件总数: {stats['total_files']} 个")
+    print(f"  子目录数: {stats['total_dirs']} 个")
+    print("\n  媒体类别分布:")
+    for cat, detail in stats["by_category"].items():
+        if detail["count"] > 0:
+            print(f"    - {cat:<10}: {detail['count']:>4d} 个 ({_format_size(detail['size'])})")
+    if stats["by_extension"]:
+        print("\n  扩展名分布 Top 5:")
+        for ext, detail in list(stats["by_extension"].items())[:5]:
+            print(f"    - {ext:<10}: {detail['count']:>4d} 个 ({_format_size(detail['size'])})")
+    print()
+    return 0
+
+
+def cmd_mcp(args: argparse.Namespace) -> int:
+    """启动原生 Model Context Protocol (MCP) Server。"""
+    def _token_getter() -> str:
+        return _get_token_manager(args).get_access_token()
+
+    server = BdpanMcpServer(_token_getter)
+    server.run_stdio_server()
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # CLI 参数解析与调度
 # ---------------------------------------------------------------------------
@@ -774,6 +877,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--account",
         default=None,
         help="指定当前命令所操作的网盘账号别名 (默认使用当前活跃账号)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="以标准化 JSON 格式输出结果 (便于脚本与机器解析)",
     )
     subparsers = parser.add_subparsers(dest="command", help="可用子命令")
 
@@ -978,6 +1086,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_auth_login.add_argument("--account", default=None, help="账号别名 (默认: 当前活跃账号)")
     p_auth_login.set_defaults(func=cmd_auth)
     p_auth.set_defaults(func=cmd_auth)
+
+    # 17. info
+    p_info = subparsers.add_parser("info", help="探测视频媒体的深度元数据 (分辨率/时长/编码/音轨)")
+    p_info.add_argument("path", help="网盘视频/多媒体文件绝对路径")
+    p_info.set_defaults(func=cmd_info)
+
+    # 18. stats
+    p_stats = subparsers.add_parser("stats", help="递归聚合统计目录下的容量、文件数与媒体分类分布")
+    p_stats.add_argument("path", nargs="?", default="/", help="网盘目录路径 (默认: /)")
+    p_stats.add_argument("--depth", type=int, default=None, help="最大递归深度")
+    p_stats.set_defaults(func=cmd_stats)
+
+    # 19. mcp
+    p_mcp = subparsers.add_parser("mcp", help="启动原生 Model Context Protocol (MCP) Server (基于 stdio)")
+    p_mcp.set_defaults(func=cmd_mcp)
 
     return parser
 

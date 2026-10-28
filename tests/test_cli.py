@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, patch
+import json
 import logging
 import pytest
 
@@ -823,6 +824,112 @@ def test_cli_account_flag(capsys):
             # 确认 TokenManager 实例化时传入了 account='backup'
             _, kwargs = mock_tm_cls.call_args
             assert kwargs.get("account") == "backup"
+
+
+def test_cli_json_envelope_ls(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = [
+            {"server_filename": "demo.mp4", "isdir": 0, "size": 1024, "path": "/demo.mp4"}
+        ]
+        mock_mgr_getter.return_value = mock_mgr
+
+        exit_code = main(["--json", "ls", "/"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert payload["success"] is True
+        assert payload["code"] == 0
+        assert len(payload["data"]) == 1
+        assert payload["data"][0]["server_filename"] == "demo.mp4"
+
+
+def test_cli_json_envelope_whoami(capsys):
+    with patch("bdpan_cli.cli._get_account_client") as mock_ac_getter:
+        mock_ac = MagicMock()
+        mock_ac.user_info.return_value = {
+            "baidu_name": "developer",
+            "netdisk_name": "developer_pan",
+            "vip_type": 2,
+        }
+        mock_ac_getter.return_value = mock_ac
+
+        exit_code = main(["--json", "whoami"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert payload["success"] is True
+        assert payload["data"]["baidu_name"] == "developer"
+
+
+def test_cli_info(capsys):
+    with patch("bdpan_cli.cli._get_media_info_client") as mock_mc_getter:
+        mock_mc = MagicMock()
+        mock_mc.get_media_info.return_value = {
+            "path": "/movies/demo.mkv",
+            "filename": "demo.mkv",
+            "size": 1048576,
+            "category": "video",
+            "is_video": True,
+            "resolution": "3840x2160 (4K UHD)",
+            "duration_formatted": "01:30:00",
+            "duration_seconds": 5400,
+            "video_codec": "HEVC",
+            "audio_tracks_count": 2,
+            "md5": "abc123md5",
+        }
+        mock_mc_getter.return_value = mock_mc
+
+        # 1. 人类可读测试
+        exit_code = main(["info", "/movies/demo.mkv"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "4K UHD" in captured.out
+        assert "HEVC" in captured.out
+
+        # 2. --json 信封测试
+        exit_code = main(["--json", "info", "/movies/demo.mkv"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert payload["success"] is True
+        assert payload["data"]["video_codec"] == "HEVC"
+
+
+def test_cli_stats(capsys):
+    with patch("bdpan_cli.cli._get_media_info_client") as mock_mc_getter:
+        mock_mc = MagicMock()
+        mock_mc.get_dir_stats.return_value = {
+            "root": "/movies",
+            "total_size": 2048,
+            "total_files": 2,
+            "total_dirs": 1,
+            "by_category": {
+                "video": {"count": 1, "size": 1500},
+                "subtitle": {"count": 1, "size": 548},
+            },
+            "by_extension": {
+                ".mkv": {"count": 1, "size": 1500},
+                ".srt": {"count": 1, "size": 548},
+            },
+        }
+        mock_mc_getter.return_value = mock_mc
+
+        # 1. 人类可读测试
+        exit_code = main(["stats", "/movies"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "目录聚合统计 [/movies]" in captured.out
+        assert "video" in captured.out
+
+        # 2. --json 信封测试
+        exit_code = main(["--json", "stats", "/movies"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        payload = json.loads(captured.out)
+        assert payload["success"] is True
+        assert payload["data"]["total_files"] == 2
+
 
 
 
