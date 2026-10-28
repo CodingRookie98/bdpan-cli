@@ -4,6 +4,10 @@
 
 ## 2026-10-28
 
+- **feat(transfer)**: Phase 2 传输核心能力补齐与极速优化交付（BK-0032~BK-0033）。
+  - **BK-0032 (大文件下载与直链提取)**: 新增 `Downloader` 模块（`downloader.py`）与 `bdpan download`、`bdpan dlink` 终端命令；调用 `MultimediafileApi.xpanmultimediafilemetas(dlink=1)` 获取真实直链，全局强制注入 `User-Agent: pan.baidu.com` 请求头防 403 限速；支持大文件分块断点续传（基于 `.tmp` 临时文件与 HTTP Range 协议）与同名跳过/覆盖保护；`dlink` 命令支持 `--aria2` 与 `--curl` 直接导出多线程高速下载脚本；
+  - **BK-0033 (极速秒传与动态机房接入)**: 升级 `Uploader`（`uploader.py`），在 `precreate` 预上传阶段若服务端返回 `return_type == 2`（特征命中云端秒传）则直接跳过分块数据传输直接调用 `_create`，实现 0 流量秒传；新增 `locate_upload_host` 原语，上传前动态向百度请求延时最低的最优机房 host 列表，提升跨网络运营商传输稳定性；
+  - 全量测试套件从 128 项扩充至 140 项全绿通过（`140 passed in 7.16s`）。
 - **feat(packaging)**: Phase 1 开源打包与全渠道分发基建交付（BK-0029~BK-0031）。
   - **BK-0029 (Vendor 解耦与内联化)**: 将 `vendor/baidu-pan-sdk/openapi_client` 内聚至 `src/bdpan_cli/_vendor/openapi_client`，调整所有模块命名空间引用；移除 `pyproject.toml` 中的 `[tool.uv.sources]` 本地相对路径依赖，添加标准 PyPI 元数据与分类器，使项目直接支持标准 Wheel 与 Sdist 构建（`uv build` 生成标准产物），在全新隔离虚拟环境中 pip 安装验证通过；
   - **BK-0030 (开源工程与合规规范)**: 新增 `LICENSE` (MIT License)；新增 `CONTRIBUTING.md` 贡献开发手册（涵盖本地搭建、测试门禁与提交规范）；更新根目录 `README.md`，添加开源徽章与全渠道安装说明（`uv tool` / `uvx` / `pip` / Releases 单文件二进制）；加固 `.gitignore` 凭证与构建文件防泄密保护；

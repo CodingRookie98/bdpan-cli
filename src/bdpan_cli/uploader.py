@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import time
+import urllib.request
 from pathlib import Path
 from typing import Any, Callable
 
@@ -52,6 +53,22 @@ class Uploader:
         self.access_token = access_token
         self.api_client = api_client or openapi_client.ApiClient()
         self._fileupload_api = FileuploadApi(self.api_client)
+
+    def locate_upload_host(self) -> str:
+        """动态探测最优机房上传 host，失败时回退至默认 d.pcs.baidu.com。"""
+        url = f"https://d.pcs.baidu.com/rest/2.0/pcs/file?method=locateupload&access_token={self.access_token}"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "pan.baidu.com"})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                servers = data.get("servers") or []
+                if servers and isinstance(servers, list):
+                    host = servers[0].get("host")
+                    if host:
+                        return str(host)
+        except Exception as e:
+            logger.debug("动态机房探测失败，使用默认 host: %s", e)
+        return "d.pcs.baidu.com"
 
     # ------------------------------------------------------------------
     # 分片规划与哈希
@@ -172,6 +189,15 @@ class Uploader:
         if progress:
             progress({"phase": "precreate"})
         uploadid = str(pre["uploadid"])
+
+        # 极速秒传判定：云端命中相同特征文件，无需上传任何分片直接创建
+        if pre.get("return_type") == 2:
+            if progress:
+                progress({"phase": "fast_upload", "uploadid": uploadid})
+            res = self._create(remote_path, size, md5s, uploadid, rtype, progress)
+            self._clear_state(state_file, key)
+            return res
+
         missing = [int(x) for x in pre.get("block_list") or []]
         uploaded = [i for i in range(len(chunks)) if i not in missing]
         self._save_state(

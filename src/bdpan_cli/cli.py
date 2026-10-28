@@ -14,6 +14,7 @@ from bdpan_cli.account import AccountClient, AccountError
 from bdpan_cli.auth import TOKEN_CACHE, TokenManager
 from bdpan_cli.config import load_config
 from bdpan_cli.dedup import execute_dedup, plan_dedup
+from bdpan_cli.downloader import DownloadError, Downloader
 from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
 from bdpan_cli.preview_scrape import generate_preview
@@ -37,6 +38,12 @@ def _get_account_client() -> AccountClient:
     config = load_config()
     token = TokenManager(config).get_access_token()
     return AccountClient(token)
+
+
+def _get_downloader() -> Downloader:
+    config = load_config()
+    token = TokenManager(config).get_access_token()
+    return Downloader(token)
 
 
 def _format_size(size_bytes: int) -> str:
@@ -527,6 +534,81 @@ def cmd_dedup(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_download(args: argparse.Namespace) -> int:
+    """下载网盘文件到本地。"""
+    downloader = _get_downloader()
+    dest = args.dest or "."
+    paths = args.paths
+    if not paths:
+        print("❌ 请指定要下载的网盘文件路径")
+        return 1
+
+    success_count = 0
+    fail_count = 0
+
+    print(f"\n📦 开始批量下载任务，共 {len(paths)} 个目标，保存至: {dest}\n")
+
+    for idx, remote_path in enumerate(paths, 1):
+        print(f"[{idx}/{len(paths)}] ⬇️  正在下载: {remote_path}")
+
+        def _progress(ev: dict[str, Any]) -> None:
+            if ev.get("phase") == "download":
+                cur = _format_size(ev["downloaded"])
+                tot = _format_size(ev["total"])
+                spd = _format_size(int(ev.get("speed", 0)))
+                pct = (ev["downloaded"] / ev["total"] * 100) if ev["total"] > 0 else 0
+                print(f"\r    ⏳ 进度: {pct:.1f}% ({cur}/{tot}) @ {spd}/s", end="", flush=True)
+
+        try:
+            local_path = downloader.download_file(
+                remote_path,
+                local_dest=dest,
+                overwrite=args.overwrite,
+                progress=_progress,
+            )
+            print(f"\n    ✅ 完成: {local_path}")
+            success_count += 1
+        except DownloadError as e:
+            print(f"\n    ❌ 失败: {e}")
+            fail_count += 1
+
+    print(f"\n🏁 下载任务结束: 成功 {success_count} 个，失败 {fail_count} 个。\n")
+    return 1 if fail_count > 0 else 0
+
+
+def cmd_dlink(args: argparse.Namespace) -> int:
+    """查询或导出网盘文件高速下载直链。"""
+    downloader = _get_downloader()
+    paths = args.paths
+    if not paths:
+        print("❌ 请指定网盘文件路径")
+        return 1
+
+    fail_count = 0
+    for path in paths:
+        try:
+            meta = downloader.get_dlink(path)
+            dlink = meta["dlink"]
+            size_str = _format_size(meta.get("size", 0))
+            filename = meta.get("server_filename", os.path.basename(path))
+
+            if args.aria2:
+                cmd = downloader.generate_export_command(dlink, filename, style="aria2")
+                print(cmd)
+            elif args.curl:
+                cmd = downloader.generate_export_command(dlink, filename, style="curl")
+                print(cmd)
+            else:
+                print(f"📄 文件: {path} ({size_str})")
+                print(f"🔗 直链: {dlink}")
+                print(f"💡 说明: 直链请求头须携带 User-Agent: pan.baidu.com\n")
+        except DownloadError as e:
+            print(f"❌ 获取失败 [{path}]: {e}", file=sys.stderr)
+            fail_count += 1
+
+    return 1 if fail_count > 0 else 0
+
+
 # ---------------------------------------------------------------------------
 # CLI 参数解析与调度
 # ---------------------------------------------------------------------------
@@ -684,6 +766,27 @@ def build_parser() -> argparse.ArgumentParser:
     p_dedup.add_argument("--include-orphans", action="store_true", help="处理无主冲突副本组（保留 (1)，清理 (2)+）")
     p_dedup.add_argument("--include-empty", action="store_true", help="同时扫描并清理空目录")
     p_dedup.set_defaults(func=cmd_dedup)
+
+    # 12. download
+    p_download = subparsers.add_parser(
+        "download",
+        help="下载网盘文件至本地（支持断点续传与批量下载）",
+    )
+    p_download.add_argument("paths", nargs="+", help="网盘文件路径 (支持多个)")
+    p_download.add_argument("-d", "--dest", default=".", help="本地保存目标目录或文件路径 (默认: 当前目录)")
+    p_download.add_argument("--overwrite", action="store_true", help="本地同名文件存在时强制覆盖")
+    p_download.set_defaults(func=cmd_download)
+
+    # 13. dlink
+    p_dlink = subparsers.add_parser(
+        "dlink",
+        help="查询网盘文件高速下载直链 (支持导出 aria2c / curl 命令)",
+    )
+    p_dlink.add_argument("paths", nargs="+", help="网盘文件路径 (支持多个)")
+    dlink_export_grp = p_dlink.add_mutually_exclusive_group()
+    dlink_export_grp.add_argument("--aria2", action="store_true", help="输出适用于 aria2c 的多线程高速下载命令")
+    dlink_export_grp.add_argument("--curl", action="store_true", help="输出适用于 curl 的断点续传下载命令")
+    p_dlink.set_defaults(func=cmd_dlink)
 
     return parser
 

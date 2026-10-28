@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import Any
 
 from bdpan_cli._vendor import openapi_client
@@ -75,6 +76,25 @@ class FileManager:
                 break
             start += len(entries)
         return all_entries
+
+    def get_file_info(self, path: str) -> dict[str, Any] | None:
+        """获取指定网盘文件/目录的元信息。
+
+        通过探测其父目录条目列表，按 path 精确匹配返回单条 entry；
+        若不存在则返回 None。
+        """
+        path = "/" + path.strip("/") if not path.startswith("/") else path
+        if path == "/":
+            return {"fs_id": 0, "path": "/", "server_filename": "", "isdir": 1, "size": 0}
+        parent = os.path.dirname(path) or "/"
+        try:
+            entries = self.list_dir(parent)
+            for entry in entries:
+                if entry.get("path") == path:
+                    return entry
+            return None
+        except FileManagerError:
+            return None
 
     def walk(self, root: str, max_depth: int | None = None) -> WalkResult:
         """深度优先递归遍历网盘子树。

@@ -625,3 +625,73 @@ def test_cli_dedup_same_dir_error(capsys):
         captured = capsys.readouterr()
         assert "隔离目录不能与待扫描目录相同" in captured.out
 
+
+def test_cli_download_success(capsys):
+    with patch("bdpan_cli.cli._get_downloader") as mock_downloader_getter:
+        mock_dl = MagicMock()
+        mock_dl.download_file.return_value = "/local/path/video.mp4"
+        mock_downloader_getter.return_value = mock_dl
+
+        exit_code = main(["download", "/videos/video.mp4", "--dest", "/local/path"])
+        assert exit_code == 0
+        mock_dl.download_file.assert_called_once()
+        call_args = mock_dl.download_file.call_args
+        assert call_args[0] == ("/videos/video.mp4",)
+        assert call_args[1]["local_dest"] == "/local/path"
+        assert call_args[1]["overwrite"] is False
+        assert callable(call_args[1]["progress"])
+        captured = capsys.readouterr()
+        assert "下载任务结束: 成功 1 个，失败 0 个" in captured.out
+
+
+def test_cli_dlink_default(capsys):
+    with patch("bdpan_cli.cli._get_downloader") as mock_downloader_getter:
+        mock_dl = MagicMock()
+        mock_dl.get_dlink.return_value = {
+            "dlink": "https://d.pcs.baidu.com/file/123",
+            "size": 1048576,
+            "server_filename": "video.mp4",
+        }
+        mock_downloader_getter.return_value = mock_dl
+
+        exit_code = main(["dlink", "/videos/video.mp4"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "直链: https://d.pcs.baidu.com/file/123" in captured.out
+        assert "User-Agent: pan.baidu.com" in captured.out
+
+
+def test_cli_dlink_aria2(capsys):
+    with patch("bdpan_cli.cli._get_downloader") as mock_downloader_getter:
+        mock_dl = MagicMock()
+        mock_dl.get_dlink.return_value = {
+            "dlink": "https://d.pcs.baidu.com/file/123",
+            "size": 1048576,
+            "server_filename": "video.mp4",
+        }
+        mock_dl.generate_export_command.return_value = 'aria2c -c -s16 -x16 "https://d.pcs.baidu.com/file/123"'
+        mock_downloader_getter.return_value = mock_dl
+
+        exit_code = main(["dlink", "/videos/video.mp4", "--aria2"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert 'aria2c -c -s16 -x16 "https://d.pcs.baidu.com/file/123"' in captured.out
+
+
+def test_cli_dlink_curl(capsys):
+    with patch("bdpan_cli.cli._get_downloader") as mock_downloader_getter:
+        mock_dl = MagicMock()
+        mock_dl.get_dlink.return_value = {
+            "dlink": "https://d.pcs.baidu.com/file/123",
+            "size": 1048576,
+            "server_filename": "video.mp4",
+        }
+        mock_dl.generate_export_command.return_value = 'curl -C - -H "User-Agent: pan.baidu.com" -o "video.mp4" "https://d.pcs.baidu.com/file/123"'
+        mock_downloader_getter.return_value = mock_dl
+
+        exit_code = main(["dlink", "/videos/video.mp4", "--curl"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert 'curl -C - -H "User-Agent: pan.baidu.com"' in captured.out
+
+

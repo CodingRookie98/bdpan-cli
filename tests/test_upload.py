@@ -3,7 +3,7 @@
 import hashlib
 import json
 import os
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from bdpan_cli._vendor.openapi_client.rest import ApiException
@@ -347,3 +347,46 @@ def test_upload_resume_failure_falls_back_to_fresh(tmp_path):
     uploader.upload(str(f), "/dst/f.bin", state_file=state_file, local_key=STATE["local"])
     assert api.xpanfilecreate.call_args[1]["uploadid"] == "U16"
     assert not state_file.exists()
+
+
+def test_upload_fast_instant_upload_return_type_2(tmp_path):
+    uploader, api = _make_uploader()
+    f = tmp_path / "fast.bin"
+    f.write_bytes(b"quick upload payload")
+
+    # precreate 返回 return_type == 2 表示命中秒传
+    api.xpanfileprecreate.return_value = {
+        "errno": 0,
+        "uploadid": "FAST_U01",
+        "return_type": 2,
+        "block_list": [],
+    }
+    api.xpanfilecreate.return_value = {"errno": 0, "fs_id": 9999}
+
+    events = []
+    res = uploader.upload(str(f), "/dst/fast.bin", progress=lambda ev: events.append(ev))
+
+    # 验证秒传：未调用任何分片上传 pcssuperfile2，直接完成
+    assert api.pcssuperfile2.call_count == 0
+    assert api.xpanfilecreate.call_args[1]["uploadid"] == "FAST_U01"
+    assert any(ev.get("phase") == "fast_upload" for ev in events)
+    assert res["fs_id"] == 9999
+
+
+def test_locate_upload_host():
+    uploader, _ = _make_uploader()
+    # 模拟正常响应
+    with patch("urllib.request.urlopen") as mock_urlopen:
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = b'{"servers": [{"host": "bj.d.pcs.baidu.com"}]}'
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        host = uploader.locate_upload_host()
+        assert host == "bj.d.pcs.baidu.com"
+
+    # 模拟失败回退
+    with patch("urllib.request.urlopen", side_effect=Exception("network error")):
+        host = uploader.locate_upload_host()
+        assert host == "d.pcs.baidu.com"
+

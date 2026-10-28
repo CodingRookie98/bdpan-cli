@@ -26,12 +26,12 @@
 
 ## 🚀 活跃执行状态与持久化检查点 (Active Checkpoint)
 - **当前执行通道**: Heavy Track
-- **当前活跃阶段**: Phase 1 已全量交付；Phase 2 待启动
+- **当前活跃阶段**: Phase 2 已全量交付；Phase 3 待启动
 - **当前活跃子任务**: 无
 - **当前子任务重试计数**: 0/3
-- **外层循环迭代**: 1/5
-- **最后一次验证状态**: Exit Code 0, 128 passed（main 分支全量测试套件全绿，Wheel/Sdist 构建成功，隔离环境 pip 实测成功，单文件二进制 Exit Code 0）
-- **最新有效提交**: 待提交 Phase 1 交付变更
+- **外层循环迭代**: 2/5
+- **最后一次验证状态**: Exit Code 0, 140 passed（main 分支全量测试套件全绿，download/dlink 与秒传/动态机房全部交付）
+- **最新有效提交**: 待提交 Phase 2 交付变更
 - **阻断原因**: 无
 
 ---
@@ -123,19 +123,19 @@
 ---
 
 ### 阶段二：核心传输能力补齐与极速优化 (Phase 2: Core Transfer & Performance)
-- [ ] **Task 2.1: 实现 `bdpan download` 下载引擎与断点续传**
+- [x] **Task 2.1: 实现 `bdpan download` 下载引擎与断点续传**
   - 封装接口调用获取下载真实直链（`filemetas&dlink=1`）；
   - 注入 `User-Agent: pan.baidu.com` 请求头规避限速；
   - 实现基于 HTTP Range 的大文件并发分块下载与断点续传机制；
   - 编写单元测试（Mock HTTP 下载、分块与重试流）并对网盘小文件/大文件验证。
-- [ ] **Task 2.2: 实现 `bdpan dlink` 直链与脚本导出命令**
+- [x] **Task 2.2: 实现 `bdpan dlink` 直链与脚本导出命令**
   - 提供单文件/目录直链查询；
   - 输出配套 `aria2c` / `curl` 导出命令参数。
-- [ ] **Task 2.3: 升级 `bdpan upload` 极速秒传机制**
+- [x] **Task 2.3: 升级 `bdpan upload` 极速秒传机制**
   - 在上传预建阶段计算文件首片 256KB MD5 与全量 MD5；
   - 对接网盘秒传判定，命中时直接跳过分块传输完成创建；
   - 编写单测（Mock 秒传命中与未命中两种分支）。
-- [ ] **Task 2.4: 接入 `locateupload` 动态最优机房探测**
+- [x] **Task 2.4: 接入 `locateupload` 动态最优机房探测**
   - 在分片上传前动态请求百度最优上传服务器节点 host，提升跨地域网络稳定性与上传吞吐量。
 
 ---

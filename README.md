@@ -52,7 +52,9 @@ bdpan quota [--check-expire] [--check-free]  # 网盘容量
 bdpan whoami                             # 账户信息
 bdpan search <关键词> [--dir 目录] [--no-recursion]
 bdpan tree <路径> [--depth N] [--index 索引.json]  # 递归树+本地索引
-bdpan upload <本地文件> <目标目录|目标目录/新名> [--overwrite]  # 分片上传+断点续传
+bdpan upload <本地文件> <目标目录|目标目录/新名> [--overwrite]  # 分片上传+断点续传（首片秒传+动态机房）
+bdpan download <网盘文件>... [--dest 本地目录] [--overwrite]  # 大文件断点续传下载
+bdpan dlink <网盘文件>... [--aria2 | --curl]          # 提取高速直链或导出下载脚本
 bdpan dedup /影视/电影 --staging-dir /隔离区      # 治理 (1)/(2) 冲突副本
 bdpan scrape foldering /影视/电影/unscraped       # 媒体库电影散落文件建目录归集
 ```
