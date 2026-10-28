@@ -12,3 +12,5 @@
 - [待办与后续方向 (Backlog)](project/backlog.md): （暂无进行中任务）
 - [变更日志 (Changelog)](project/changelog.md)
 - [CLI 文件操作命令补齐（cp/rm/rename + mv 语义修复）实施计划](project/plans/2026-09-30-file-ops-commands.md): 1. `bdpan cp <src> <dest>`：dest 为已存在目录（或以 `/` 结尾）→ 复制入内并保持原名；否则按 `目录/新名` 复制并改名；
+- [bdpan-cli 开源筹备、全渠道打包分发与能力补齐实施计划](project/plans/2026-10-28-roadmap-and-open-source-packaging.md): 1. **打包与构建合规验收**：
+- [bdpan-cli 长期发展路线图 (Product & Architecture Roadmap)](project/roadmap.md): `bdpan-cli` 从最初的个人媒体库规范化整理脚本，全面演进为：

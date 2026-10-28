@@ -1,17 +1,36 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.6.0
+> - **文档版本**: V1.7.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-10-28
 > - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
+> - **演进计划**: [roadmap.md](./roadmap.md) | [2026-10-28 实施计划](./plans/2026-10-28-roadmap-and-open-source-packaging.md)
 
 ## 进行中
 
 （暂无进行中任务）
 
-## 计划中
+## 计划中 (路线图演进任务)
 
+### 阶段一：开源合规与全渠道打包分发基建 (Phase 1)
+- [ ] BK-0029 Vendor SDK 内联化与相对路径解耦（将 `vendor/baidu-pan-sdk/openapi_client` 迁移至 `src/bdpan_cli/_vendor/openapi_client`，移除 `pyproject.toml` 中的 `tool.uv.sources` 相对依赖，实现标准纯净包构建）
+- [ ] BK-0030 GitHub 开源合规与工程化建设（新增 `LICENSE` MIT、完善 `CONTRIBUTING.md`、更新 `README.md` 双语徽章与全渠道安装说明、强化敏感凭据 `.gitignore` 防泄密机制）
+- [ ] BK-0031 GitHub Actions 自动化 CI/CD 与跨平台单文件二进制发布（配置多 Python 版本矩阵测试 `ci.yml`、PyPI Trusted Publishing 自动化发版、PyInstaller 编译 Linux/macOS/Windows 单文件免运行环境二进制可执行档）
+
+### 阶段二：传输核心能力补齐与极速优化 (Phase 2)
+- [ ] BK-0032 大文件下载与断点续传引擎（新增 `bdpan download` 与 `bdpan dlink` 命令；调用 `filemetas&dlink=1`，注入 `User-Agent: pan.baidu.com` 防 403 限速，支持多线程分块下载与 `.download_state` 断点续传，支持导出 aria2c/curl 命令）
+- [ ] BK-0033 极速秒传机制与动态最优机房接入（大文件上传 `precreate` 阶段计算首片 256KB MD5 与全量 MD5 进行云端碰撞，命中直接秒传 0 流量完成；上传前调用 `locateupload` 动态获取延时最低最优机房 host，提升网络稳定性）
+
+### 阶段三：安全运维体系与多账号隔离 (Phase 3)
+- [ ] BK-0034 操作流水审计与逆向撤销体系（本地落盘 `.bdpan_ops/<op_id>.json` 记录批量更名/移动/去重等操作映射；新增 `bdpan ops list/show` 以及 `bdpan undo <op_id>` 逆向撤销命令，支持 `--dry-run` 预览与一键安全复原）
+- [ ] BK-0035 多账号认证管理与动态切换（升级 TokenManager 支持多账号别名存储；新增 `bdpan auth list/add/switch` 子命令，CLI 根命令新增全局 `--account <alias>` 参数支持多网盘账号无缝切换）
+
+### 阶段四：媒体可观测性与 AI 原生集成 (Phase 4)
+- [ ] BK-0036 全局结构化输出与媒体深度元数据解析（所有 CLI 子命令支持 `--json` 标准信封输出；新增 `bdpan info <file>` 探测视频编码/分辨率/时长/码率，新增 `bdpan stats <dir>` 目录聚合容量统计）
+- [ ] BK-0037 原生 MCP (Model Context Protocol) Server 集成（实现 `bdpan mcp` 子命令，自省暴露 CLI 能力为标准 MCP Tool Schemas，支持 Claude Code、Antigravity、Cursor 等 AI 编程助手直接编排操作网盘）
+
+### 文档与规范专项
 - [ ] BK-0023 文档治理体系落地：tutorials / how-to / explanation 象限按需填充
 
 ## 待定（暂缓，待需求触发）
@@ -57,8 +76,8 @@
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V1.7.0 | 2026-10-28 | 演进路线图与开源打包规划：登记 BK-0029~BK-0037，确立四阶段能力演进、全渠道包分发与 Vendor 解耦规划 |
 | V1.6.0 | 2026-10-28 | 刮削器健壮性修复：关闭 BK-0028（解决未带空格 4K/2K 等标签粘连片名缺陷，translations 优先选取 CN 简体中文译名），测试 126→128 全绿 |
 | V1.5.0 | 2026-10-27 | 质量加固与自动化整理增强批次：关闭 BK-0024~BK-0027（刮削器 Welsh 过滤与序号剥除、ls 路径不存在报错与单文件展示、foldering 穿透扫描与字幕识别、dedup 冲突副本治理与 batch_delete），测试 104→126，实测全链路通过 |
 | V1.4.0 | 2026-10-07 | CLI 基础功能收尾批次：关闭 BK-0018~BK-0022（多源批量/递归树+索引/搜索/分片上传+续传/容量账户），测试 52→104，全项真网盘 L2 实测 |
 | V1.3.0 | 2026-10-07 | BK-0017 第三阶段 `meta` 子系统划为待定（Kodi/Emby/Jellyfin 可依目录名 IMDb/TMDB ID 精准刮削，待用户/社区需求再立项），开发重心转向 CLI 基础功能收尾 |
-| V1.2.0 | 2026-09-30 | 关闭 BK-0013~BK-0016（file-ops P4 审查建议四项全部落地） |

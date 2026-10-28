@@ -19,8 +19,10 @@
 
 ## 工程演进入口
 
+- [roadmap.md](./project/roadmap.md) — 长期产品与架构演进路线图
 - [changelog.md](./project/changelog.md) — 版本发布日志
-- [执行计划归档](./project/plans/2026-09-30-file-ops-commands.md) — goal-loop 执行计划（含测试策略裁定书）
 - [backlog.md](./project/backlog.md) — 待办事项与后续方向
+- [执行计划: 开源筹备与全渠道打包](./project/plans/2026-10-28-roadmap-and-open-source-packaging.md) — Phase 1~4 演进与落地实施计划
+- [执行计划归档: 文件操作命令补齐](./project/plans/2026-09-30-file-ops-commands.md) — goal-loop 执行计划归档（含测试策略裁定书）
 
 治理规程见 [GOVERNANCE.md](./GOVERNANCE.md)；机器可读地图见 [llms.txt](./llms.txt)。
