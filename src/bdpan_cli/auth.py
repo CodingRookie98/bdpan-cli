@@ -8,6 +8,8 @@ import json
 import time
 from pathlib import Path
 
+from typing import Any
+
 from bdpan_cli._vendor import openapi_client
 from bdpan_cli._vendor.openapi_client.api.auth_api import AuthApi
 from bdpan_cli._vendor.openapi_client.rest import ApiException
@@ -24,12 +26,64 @@ class AuthorizationNeeded(Exception):
 
 
 class TokenManager:
-    def __init__(self, config: AppConfig) -> None:
+    """网盘授权凭证管理器，支持多账号别名存储与动态切换。"""
+
+    def __init__(
+        self,
+        config: AppConfig,
+        account: str | None = None,
+        cache_path: Path | None = None,
+    ) -> None:
         self._config = config
+        self._account = account
+        self._cache_path = Path(cache_path) if cache_path else TOKEN_CACHE
+
+    def _load_all(self) -> dict[str, Any]:
+        """读取并兼容迁移缓存数据，返回统一的多账号结构字典。"""
+        if not self._cache_path.exists():
+            return {"current": "default", "accounts": {}}
+        try:
+            raw = json.loads(self._cache_path.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                return {"current": "default", "accounts": {}}
+            # 兼容旧单账号形态
+            if "access_token" in raw:
+                migrated = {
+                    "current": "default",
+                    "accounts": {
+                        "default": {
+                            "access_token": raw.get("access_token"),
+                            "refresh_token": raw.get("refresh_token"),
+                            "expires_at": raw.get("expires_at"),
+                        }
+                    },
+                }
+                self._cache_path.write_text(json.dumps(migrated, indent=2, ensure_ascii=False))
+                return migrated
+            if "accounts" not in raw or not isinstance(raw["accounts"], dict):
+                raw["accounts"] = {}
+            if "current" not in raw:
+                raw["current"] = "default"
+            return raw
+        except (OSError, json.JSONDecodeError):
+            return {"current": "default", "accounts": {}}
+
+    def _save_all(self, data: dict[str, Any]) -> None:
+        self._cache_path.parent.mkdir(parents=True, exist_ok=True)
+        self._cache_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+    def get_active_account(self) -> str:
+        """返回当前生效的账号别名。"""
+        if self._account:
+            return self._account
+        all_data = self._load_all()
+        return all_data.get("current") or "default"
 
     def get_access_token(self) -> str:
-        cached = self._load_cache()
-        if cached:
+        account = self.get_active_account()
+        all_data = self._load_all()
+        cached = all_data.get("accounts", {}).get(account)
+        if cached and "expires_at" in cached and "access_token" in cached:
             if cached["expires_at"] - time.time() > REFRESH_BEFORE_EXPIRY:
                 return cached["access_token"]
             refreshed = self._refresh(cached.get("refresh_token", ""))
@@ -37,17 +91,55 @@ class TokenManager:
                 return refreshed["access_token"]
         return self._device_flow()["access_token"]
 
-    def _load_cache(self) -> dict | None:
-        if not TOKEN_CACHE.exists():
-            return None
-        try:
-            return json.loads(TOKEN_CACHE.read_text())
-        except (OSError, json.JSONDecodeError):
-            return None
+    def _load_cache(self) -> dict[str, Any] | None:
+        all_data = self._load_all()
+        account = self.get_active_account()
+        return all_data.get("accounts", {}).get(account)
 
-    def _save_cache(self, token: dict) -> dict:
-        TOKEN_CACHE.write_text(json.dumps(token, indent=2))
+    def _save_cache(self, token: dict[str, Any]) -> dict[str, Any]:
+        account = self.get_active_account()
+        all_data = self._load_all()
+        if "accounts" not in all_data or not isinstance(all_data["accounts"], dict):
+            all_data["accounts"] = {}
+        all_data["accounts"][account] = token
+        all_data["current"] = account
+        self._save_all(all_data)
         return token
+
+    def list_accounts(self) -> list[dict[str, Any]]:
+        """列出本地所有保存的网盘账号信息。"""
+        all_data = self._load_all()
+        curr = all_data.get("current") or "default"
+        accounts = all_data.get("accounts") or {}
+        res = []
+        for name, acc in accounts.items():
+            expires_at = acc.get("expires_at") or 0
+            is_valid = expires_at > time.time()
+            res.append({
+                "account": name,
+                "is_current": (name == curr),
+                "expires_at": expires_at,
+                "valid": is_valid,
+            })
+        return res
+
+    def switch_account(self, account: str) -> None:
+        """切换默认活跃账号。"""
+        all_data = self._load_all()
+        if account not in all_data.get("accounts", {}):
+            raise ValueError(f"账号 [{account}] 不存在，请先使用设备码授权登录该账号")
+        all_data["current"] = account
+        self._save_all(all_data)
+
+    def remove_account(self, account: str) -> None:
+        """移除指定账号凭证。"""
+        all_data = self._load_all()
+        accounts = all_data.get("accounts", {})
+        if account in accounts:
+            del accounts[account]
+            if all_data.get("current") == account:
+                all_data["current"] = next(iter(accounts.keys())) if accounts else "default"
+            self._save_all(all_data)
 
     def _to_cache(self, response) -> dict:
         return {

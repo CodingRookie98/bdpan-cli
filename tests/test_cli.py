@@ -695,3 +695,134 @@ def test_cli_dlink_curl(capsys):
         assert 'curl -C - -H "User-Agent: pan.baidu.com"' in captured.out
 
 
+def test_cli_ops_list(capsys):
+    with patch("bdpan_cli.cli.OperationLogger") as mock_logger_cls:
+        mock_logger = MagicMock()
+        mock_logger.list_operations.return_value = [
+            {
+                "op_id": "op_test123",
+                "created_at": "2026-10-28T12:00:00",
+                "command": "mv",
+                "account": "default",
+                "items": [{"src": "/a.mp4", "dest": "/movies/a.mp4"}],
+                "undone": False,
+            }
+        ]
+        mock_logger_cls.return_value = mock_logger
+
+        exit_code = main(["ops", "list"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "op_test123" in captured.out
+        assert "mv" in captured.out
+
+
+def test_cli_ops_show(capsys):
+    with patch("bdpan_cli.cli.OperationLogger") as mock_logger_cls:
+        mock_logger = MagicMock()
+        mock_logger.get_operation.return_value = {
+            "op_id": "op_test123",
+            "created_at": "2026-10-28T12:00:00",
+            "command": "mv",
+            "account": "default",
+            "items": [{"src": "/a.mp4", "dest": "/movies/a.mp4"}],
+            "undone": False,
+        }
+        mock_logger_cls.return_value = mock_logger
+
+        exit_code = main(["ops", "show", "op_test123"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "操作流水详情 [op_test123]" in captured.out
+        assert "/a.mp4 -> /movies/a.mp4" in captured.out
+
+
+def test_cli_undo_dry_run(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.UndoEngine") as mock_engine_cls:
+        mock_engine = MagicMock()
+        mock_engine.plan_undo.return_value = {
+            "op_id": "op_test123",
+            "reversals": [
+                {"src": "/movies/a.mp4", "dest_dir": "/", "newname": "a.mp4"}
+            ]
+        }
+        mock_engine_cls.return_value = mock_engine
+
+        exit_code = main(["undo", "op_test123", "--dry-run"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "逆向回滚计划 [op_test123]" in captured.out
+        assert "[dry-run]" in captured.out
+        mock_engine.execute_undo.assert_not_called()
+
+
+def test_cli_undo_execute_yes(capsys):
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.UndoEngine") as mock_engine_cls:
+        mock_engine = MagicMock()
+        mock_engine.plan_undo.return_value = {
+            "op_id": "op_test123",
+            "reversals": [
+                {"src": "/movies/a.mp4", "dest_dir": "/", "newname": "a.mp4"}
+            ]
+        }
+        mock_engine.execute_undo.return_value = {"op_id": "op_test123", "undone_count": 1}
+        mock_engine_cls.return_value = mock_engine
+
+        exit_code = main(["undo", "op_test123", "-y"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "撤销成功！已成功逆向还原 1 项" in captured.out
+        mock_engine.execute_undo.assert_called_once_with("op_test123", dry_run=False)
+
+
+def test_cli_auth_list(capsys):
+    with patch("bdpan_cli.cli._get_token_manager") as mock_tm_getter:
+        mock_tm = MagicMock()
+        mock_tm.list_accounts.return_value = [
+            {"account": "default", "is_current": True, "valid": True, "expires_at": 1800000000},
+            {"account": "backup", "is_current": False, "valid": True, "expires_at": 1800000000},
+        ]
+        mock_tm.get_active_account.return_value = "default"
+        mock_tm_getter.return_value = mock_tm
+
+        exit_code = main(["auth", "list"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "default" in captured.out
+        assert "backup" in captured.out
+        assert "当前活跃账号: default" in captured.out
+
+
+def test_cli_auth_switch(capsys):
+    with patch("bdpan_cli.cli._get_token_manager") as mock_tm_getter:
+        mock_tm = MagicMock()
+        mock_tm_getter.return_value = mock_tm
+
+        exit_code = main(["auth", "switch", "backup"])
+        assert exit_code == 0
+        mock_tm.switch_account.assert_called_once_with("backup")
+        captured = capsys.readouterr()
+        assert "成功切换当前活跃账号为: backup" in captured.out
+
+
+def test_cli_account_flag(capsys):
+    with patch("bdpan_cli.cli.TokenManager") as mock_tm_cls:
+        mock_tm = MagicMock()
+        mock_tm.get_access_token.return_value = "fake_token_backup"
+        mock_tm_cls.return_value = mock_tm
+
+        with patch("bdpan_cli.cli.FileManager") as mock_fm_cls:
+            mock_fm = MagicMock()
+            mock_fm.list_dir.return_value = []
+            mock_fm_cls.return_value = mock_fm
+
+            exit_code = main(["--account", "backup", "ls", "/"])
+            assert exit_code == 0
+            # 确认 TokenManager 实例化时传入了 account='backup'
+            _, kwargs = mock_tm_cls.call_args
+            assert kwargs.get("account") == "backup"
+
+
+

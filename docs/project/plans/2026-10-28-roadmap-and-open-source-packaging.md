@@ -26,12 +26,12 @@
 
 ## 🚀 活跃执行状态与持久化检查点 (Active Checkpoint)
 - **当前执行通道**: Heavy Track
-- **当前活跃阶段**: Phase 2 已全量交付；Phase 3 待启动
+- **当前活跃阶段**: Phase 3 已全量交付；Phase 4 待启动
 - **当前活跃子任务**: 无
 - **当前子任务重试计数**: 0/3
-- **外层循环迭代**: 2/5
-- **最后一次验证状态**: Exit Code 0, 140 passed（main 分支全量测试套件全绿，download/dlink 与秒传/动态机房全部交付）
-- **最新有效提交**: 待提交 Phase 2 交付变更
+- **外层循环迭代**: 3/5
+- **最后一次验证状态**: Exit Code 0, 155 passed（main 分支全量测试套件全绿，ops/undo 流水撤销与 auth/--account 多账号全部交付）
+- **最新有效提交**: 待提交 Phase 3 交付变更
 - **阻断原因**: 无
 
 ---
@@ -141,14 +141,14 @@
 ---
 
 ### 阶段三：安全运维体系与多账号隔离 (Phase 3: Safety Ops & Multi-Account)
-- [ ] **Task 3.1: 构建 `.bdpan_ops` 操作流水审计子系统**
+- [x] **Task 3.1: 构建 `.bdpan_ops` 操作流水审计子系统**
   - 设计结构化操作日志格式（包含操作唯一 ID、时间戳、命令名、操作人、源路径/目的路径映射清单）；
   - 在批量更名、批量移动、归集与去重命令中统一注入审计拦截器，原子落盘日志。
-- [ ] **Task 3.2: 实现 `bdpan ops` 与 `bdpan undo` 可逆撤销命令**
+- [x] **Task 3.2: 实现 `bdpan ops` 与 `bdpan undo` 可逆撤销命令**
   - 提供 `bdpan ops list` 与 `bdpan ops show <op_id>`；
   - 实现 `bdpan undo <op_id>`，自动解析操作对反向生成执行方案，支持 `--dry-run` 预览与一键复原；
   - 编写单元测试覆盖正向操作与逆向撤销的守恒对账。
-- [ ] **Task 3.3: 多账号认证管理体系 (`bdpan auth`)**
+- [x] **Task 3.3: 多账号认证管理体系 (`bdpan auth`)**
   - 升级 `auth.py` TokenManager 支持多账号别名存储（如 `default`, `work`, `backup`）；
   - 增加 `bdpan auth list`、`bdpan auth add <alias>`、`bdpan auth switch <alias>`；
   - CLI 根命令新增全局 `--account <alias>` 参数支持即时切换。

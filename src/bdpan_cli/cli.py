@@ -17,6 +17,7 @@ from bdpan_cli.dedup import execute_dedup, plan_dedup
 from bdpan_cli.downloader import DownloadError, Downloader
 from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.foldering import execute_foldering, plan_foldering
+from bdpan_cli.ops import OperationLogger, UndoEngine, UndoError
 from bdpan_cli.preview_scrape import generate_preview
 from bdpan_cli.uploader import Uploader
 from bdpan_cli.apply_scrape_rename import apply_renames
@@ -28,21 +29,24 @@ logger = logging.getLogger("bdpan_cli.cli")
 UPLOAD_STATE_FILE = TOKEN_CACHE.parent / ".bdpan_uploads.json"
 
 
-def _get_file_manager() -> FileManager:
+def _get_token_manager(args: argparse.Namespace | None = None) -> TokenManager:
     config = load_config()
-    token = TokenManager(config).get_access_token()
+    account = getattr(args, "account", None) if args else None
+    return TokenManager(config, account=account)
+
+
+def _get_file_manager(args: argparse.Namespace | None = None) -> FileManager:
+    token = _get_token_manager(args).get_access_token()
     return FileManager(token)
 
 
-def _get_account_client() -> AccountClient:
-    config = load_config()
-    token = TokenManager(config).get_access_token()
+def _get_account_client(args: argparse.Namespace | None = None) -> AccountClient:
+    token = _get_token_manager(args).get_access_token()
     return AccountClient(token)
 
 
-def _get_downloader() -> Downloader:
-    config = load_config()
-    token = TokenManager(config).get_access_token()
+def _get_downloader(args: argparse.Namespace | None = None) -> Downloader:
+    token = _get_token_manager(args).get_access_token()
     return Downloader(token)
 
 
@@ -62,7 +66,7 @@ def _format_size(size_bytes: int) -> str:
 # ---------------------------------------------------------------------------
 
 def cmd_ls(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     raw_path = args.path or "/"
     path = "/" + raw_path.strip("/") if raw_path != "/" else "/"
     entries = mgr.list_dir(path, limit=args.limit)
@@ -101,7 +105,7 @@ def cmd_ls(args: argparse.Namespace) -> int:
 
 
 def cmd_mkdir(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     path = args.path
     logger.info("正在创建目录: %s", path)
     res = mgr.mkdir(path)
@@ -156,7 +160,7 @@ def _require_dest_dir(mgr: FileManager, dest: str) -> str:
 
 
 def cmd_cp(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     srcs = args.srcs
     if len(srcs) == 1:
         dest_dir, new_name = _resolve_dest(mgr, srcs[0], args.dest)
@@ -178,14 +182,17 @@ def cmd_cp(args: argparse.Namespace) -> int:
 
 
 def cmd_mv(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     srcs = args.srcs
+    account = getattr(args, "account", None) or "default"
     if len(srcs) == 1:
         src = srcs[0]
         dest_dir, dest_name = _resolve_dest(mgr, src, args.dest)
         logger.info("正在移动: %s -> %s/%s", src, dest_dir, dest_name)
         mgr.batch_move([(src, dest_dir, dest_name)])
-        print(f"✅ 移动成功: {src} -> {dest_dir}/{dest_name}")
+        dest_path = f"{dest_dir.rstrip('/')}/{dest_name}"
+        op_id = OperationLogger().record_operation("mv", [{"src": src, "dest": dest_path}], account=account)
+        print(f"✅ 移动成功: {src} -> {dest_path} (流水号: {op_id})")
         return 0
 
     try:
@@ -196,12 +203,14 @@ def cmd_mv(args: argparse.Namespace) -> int:
     payloads = [(s, dest_dir, os.path.basename(s.rstrip("/"))) for s in srcs]
     logger.info("正在批量移动 %d 项 -> %s/", len(payloads), dest_dir)
     mgr.batch_move(payloads)
-    print(f"✅ 批量移动成功: {len(payloads)} 项 -> {dest_dir}/")
+    items = [{"src": s, "dest": f"{dest_dir.rstrip('/')}/{n}"} for s, _, n in payloads]
+    op_id = OperationLogger().record_operation("mv", items, account=account)
+    print(f"✅ 批量移动成功: {len(payloads)} 项 -> {dest_dir}/ (流水号: {op_id})")
     return 0
 
 
 def cmd_rm(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     targets = args.paths
     print("⚠️  将从网盘删除以下条目（服务端移入回收站）:")
     for p in targets:
@@ -228,15 +237,19 @@ def cmd_rm(args: argparse.Namespace) -> int:
 
 
 def cmd_rename(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     logger.info("正在重命名: %s -> %s", args.path, args.new_name)
     mgr.rename(args.path, args.new_name)
-    print(f"✅ 重命名成功: {args.path} -> {args.new_name}")
+    parent = os.path.dirname(args.path) or "/"
+    dest_path = f"{parent.rstrip('/')}/{args.new_name}"
+    account = getattr(args, "account", None) or "default"
+    op_id = OperationLogger().record_operation("rename", [{"src": args.path, "dest": dest_path}], account=account)
+    print(f"✅ 重命名成功: {args.path} -> {args.new_name} (流水号: {op_id})")
     return 0
 
 
 def cmd_search(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     entries = mgr.search(
         args.key,
         dir_path=args.dir,
@@ -266,7 +279,7 @@ def cmd_search(args: argparse.Namespace) -> int:
 
 
 def cmd_tree(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     root = args.path or "/"
     logger.info("递归遍历目录树: root=%s, max_depth=%s", root, args.depth)
     entries, errors = mgr.walk(root, max_depth=args.depth)
@@ -322,7 +335,7 @@ def cmd_upload(args: argparse.Namespace) -> int:
         print(f"❌ 本地文件不存在: {local}")
         return 1
 
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     # 目标语义与 cp 一致：尾斜杠/已存在目录 → 保持本地文件名；否则 目标目录/新名
     dest_dir, new_name = _resolve_dest(mgr, local, args.remote_dest)
     remote_path = (dest_dir.rstrip("/") or "") + "/" + new_name
@@ -370,7 +383,7 @@ def cmd_scrape_apply(args: argparse.Namespace) -> int:
 
 
 def cmd_scrape_foldering(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     target_dir = args.dir
     dry_run = args.dry_run
     batch_size = args.batch_size
@@ -413,7 +426,7 @@ def _format_vip(vip_type: Any) -> str:
 
 
 def cmd_quota(args: argparse.Namespace) -> int:
-    client = _get_account_client()
+    client = _get_account_client(args)
     res = client.quota(check_expire=args.check_expire, check_free=args.check_free)
     total = int(res.get("total") or 0)
     used = int(res.get("used") or 0)
@@ -432,7 +445,7 @@ def cmd_quota(args: argparse.Namespace) -> int:
 
 
 def cmd_whoami(args: argparse.Namespace) -> int:
-    client = _get_account_client()
+    client = _get_account_client(args)
     res = client.user_info()
     print("👤 网盘账户信息:")
     print(f"  百度账号: {res.get('baidu_name') or '-'}")
@@ -442,7 +455,7 @@ def cmd_whoami(args: argparse.Namespace) -> int:
 
 
 def cmd_dedup(args: argparse.Namespace) -> int:
-    mgr = _get_file_manager()
+    mgr = _get_file_manager(args)
     raw_path = args.path or "/"
     target_dir = "/" + raw_path.strip("/") if raw_path != "/" else "/"
 
@@ -578,7 +591,7 @@ def cmd_download(args: argparse.Namespace) -> int:
 
 def cmd_dlink(args: argparse.Namespace) -> int:
     """查询或导出网盘文件高速下载直链。"""
-    downloader = _get_downloader()
+    downloader = _get_downloader(args)
     paths = args.paths
     if not paths:
         print("❌ 请指定网盘文件路径")
@@ -609,6 +622,145 @@ def cmd_dlink(args: argparse.Namespace) -> int:
     return 1 if fail_count > 0 else 0
 
 
+def cmd_ops(args: argparse.Namespace) -> int:
+    """查看网盘操作审计流水。"""
+    subcmd = getattr(args, "ops_subcmd", None)
+    logger_instance = OperationLogger()
+
+    if subcmd == "show":
+        op = logger_instance.get_operation(args.op_id)
+        if not op:
+            print(f"❌ 未找到操作流水: {args.op_id}", file=sys.stderr)
+            return 1
+        status_str = "已撤销" if op.get("undone") else "正常"
+        print(f"\n📋 操作流水详情 [{op['op_id']}]")
+        print(f"  时间: {op.get('created_at')}")
+        print(f"  命令: {op.get('command')}")
+        print(f"  账号: {op.get('account')}")
+        print(f"  状态: {status_str}")
+        if op.get("undone_at"):
+            print(f"  撤销时间: {op.get('undone_at')}")
+        items = op.get("items") or []
+        print(f"\n  变更映射清单 (共 {len(items)} 项):")
+        for idx, item in enumerate(items, 1):
+            print(f"    {idx}. {item.get('src')} -> {item.get('dest')}")
+        print()
+        return 0
+
+    # 默认 list
+    limit = getattr(args, "limit", 20) or 20
+    ops = logger_instance.list_operations(limit=limit)
+    if not ops:
+        print("📜 暂无操作审计流水。")
+        return 0
+
+    print(f"\n📜 历史操作审计流水 (最近 {len(ops)} 条):")
+    print("-" * 80)
+    for op in ops:
+        status_tag = "[已撤销]" if op.get("undone") else "正常"
+        items_cnt = len(op.get("items") or [])
+        print(
+            f"  [{op['op_id']}] | {op.get('created_at', '')[:19]} | "
+            f"命令: {op.get('command', ''):<6} | 账号: {op.get('account', 'default'):<8} | "
+            f"影响: {items_cnt} 项 | 状态: {status_tag}"
+        )
+    print("-" * 80)
+    print("💡 使用 bdpan ops show <op_id> 查看详情，或 bdpan undo <op_id> 进行逆向回滚。\n")
+    return 0
+
+
+def cmd_undo(args: argparse.Namespace) -> int:
+    """逆向撤销历史批量操作。"""
+    mgr = _get_file_manager(args)
+    engine = UndoEngine(mgr)
+    op_id = args.op_id
+
+    try:
+        plan = engine.plan_undo(op_id)
+    except UndoError as e:
+        print(f"❌ 无法撤销: {e}", file=sys.stderr)
+        return 1
+
+    reversals = plan.get("reversals") or []
+    if not reversals:
+        print(f"⚠️  操作 [{op_id}] 无可撤销条目。")
+        return 0
+
+    print(f"\n🔍 逆向回滚计划 [{op_id}] (共 {len(reversals)} 项):")
+    for r in reversals:
+        print(f"  ↩️  {r['src']} -> {r['dest_dir']}/{r['newname']}")
+    print()
+
+    if args.dry_run:
+        print("💡 [dry-run] 仅预演逆向方案，未执行任何网盘变更。")
+        return 0
+
+    if not args.yes:
+        try:
+            ans = input(f"⚠️  确认执行逆向回滚（共 {len(reversals)} 项）? [y/N]: ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\n已取消，未做任何变更。")
+            return 0
+        if ans != "y":
+            print("已取消，未做任何变更。")
+            return 0
+
+    try:
+        res = engine.execute_undo(op_id, dry_run=False)
+        print(f"🎉 撤销成功！已成功逆向还原 {res['undone_count']} 项。\n")
+        return 0
+    except UndoError as e:
+        print(f"❌ 撤销执行失败: {e}", file=sys.stderr)
+        return 1
+
+
+def cmd_auth(args: argparse.Namespace) -> int:
+    """网盘账号认证与多租户管理。"""
+    subcmd = getattr(args, "auth_subcmd", None)
+    tm = _get_token_manager(args)
+
+    if subcmd == "switch":
+        alias = args.alias
+        try:
+            tm.switch_account(alias)
+            print(f"✅ 成功切换当前活跃账号为: {alias}")
+            return 0
+        except ValueError as e:
+            print(f"❌ 切换失败: {e}", file=sys.stderr)
+            return 1
+
+    if subcmd == "login":
+        alias = getattr(args, "account", None) or tm.get_active_account()
+        print(f"🔑 正在为账号 [{alias}] 启动设备码授权流程...")
+        tm._account = alias
+        try:
+            tm.get_access_token()
+            print(f"🎉 账号 [{alias}] 授权成功！")
+            return 0
+        except Exception as e:
+            print(f"❌ 授权失败: {e}", file=sys.stderr)
+            return 1
+
+    # 默认 list
+    accounts = tm.list_accounts()
+    active = tm.get_active_account()
+    print("\n🔑 本地网盘账号认证列表:")
+    print("-" * 65)
+    if not accounts:
+        print("  (暂无保存的账号，请执行 bdpan auth login 进行首次登录)")
+    else:
+        for acc in accounts:
+            marker = "*" if acc["is_current"] else " "
+            status = "有效" if acc["valid"] else "已过期"
+            exp_str = datetime.fromtimestamp(acc["expires_at"]).strftime("%Y-%m-%d %H:%M:%S") if acc["expires_at"] else "未知"
+            print(f"  {marker} {acc['account']:<12} | {status:<6} | 到期时间: {exp_str}")
+    print("-" * 65)
+    print(f"当前活跃账号: {active}")
+    print("💡 使用 bdpan auth switch <alias> 切换当前默认账号")
+    print("💡 或在任意命令前指定全局参数 bdpan --account <alias> <subcommand>\n")
+    return 0
+
+
 # ---------------------------------------------------------------------------
 # CLI 参数解析与调度
 # ---------------------------------------------------------------------------
@@ -617,6 +769,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bdpan",
         description="百度网盘工程化 CLI 管理工具",
+    )
+    parser.add_argument(
+        "--account",
+        default=None,
+        help="指定当前命令所操作的网盘账号别名 (默认使用当前活跃账号)",
     )
     subparsers = parser.add_subparsers(dest="command", help="可用子命令")
 
@@ -787,6 +944,40 @@ def build_parser() -> argparse.ArgumentParser:
     dlink_export_grp.add_argument("--aria2", action="store_true", help="输出适用于 aria2c 的多线程高速下载命令")
     dlink_export_grp.add_argument("--curl", action="store_true", help="输出适用于 curl 的断点续传下载命令")
     p_dlink.set_defaults(func=cmd_dlink)
+
+    # 14. ops
+    p_ops = subparsers.add_parser("ops", help="查看网盘操作审计流水")
+    ops_sub = p_ops.add_subparsers(dest="ops_subcmd", help="流水子命令")
+    p_ops_list = ops_sub.add_parser("list", help="列出历史操作审计流水")
+    p_ops_list.add_argument("--limit", type=int, default=20, help="最多显示记录数 (默认: 20)")
+    p_ops_list.set_defaults(func=cmd_ops)
+
+    p_ops_show = ops_sub.add_parser("show", help="查看指定操作流水详情与变更清单")
+    p_ops_show.add_argument("op_id", help="操作流水号")
+    p_ops_show.set_defaults(func=cmd_ops)
+    p_ops.set_defaults(func=cmd_ops)
+
+    # 15. undo
+    p_undo = subparsers.add_parser("undo", help="逆向撤销历史批量操作 (基于操作流水)")
+    p_undo.add_argument("op_id", help="操作流水号")
+    p_undo.add_argument("--dry-run", action="store_true", help="仅预演逆向回滚方案，不实际修改网盘")
+    p_undo.add_argument("-y", "--yes", action="store_true", help="跳过确认直接执行逆向回滚")
+    p_undo.set_defaults(func=cmd_undo)
+
+    # 16. auth
+    p_auth = subparsers.add_parser("auth", help="网盘账号认证与多账号管理")
+    auth_sub = p_auth.add_subparsers(dest="auth_subcmd", help="认证子命令")
+    p_auth_list = auth_sub.add_parser("list", help="列出本地所有网盘账号与到期状态")
+    p_auth_list.set_defaults(func=cmd_auth)
+
+    p_auth_switch = auth_sub.add_parser("switch", help="切换当前默认活跃网盘账号")
+    p_auth_switch.add_argument("alias", help="账号别名")
+    p_auth_switch.set_defaults(func=cmd_auth)
+
+    p_auth_login = auth_sub.add_parser("login", help="登录或重新授权指定网盘账号")
+    p_auth_login.add_argument("--account", default=None, help="账号别名 (默认: 当前活跃账号)")
+    p_auth_login.set_defaults(func=cmd_auth)
+    p_auth.set_defaults(func=cmd_auth)
 
     return parser
 

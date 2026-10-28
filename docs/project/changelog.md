@@ -4,6 +4,10 @@
 
 ## 2026-10-28
 
+- **feat(safety)**: Phase 3 安全运维体系与多账号隔离交付（BK-0034~BK-0035）。
+  - **BK-0034 (操作流水审计与逆向撤销体系)**: 新增 `ops.py`（`OperationLogger` 与 `UndoEngine`）以及 `bdpan ops`、`bdpan undo` 终端命令；所有批量更名、批量移动、归集等关键操作原子落盘结构化审计日志至 `.bdpan_ops/<op_id>.json`（包含时间、命令、账号、操作前后映射路径）；`ops list` / `ops show` 查阅历史流水；`undo <op_id>` 逆向解析操作对并基于 `FileManager.batch_move` 执行逆向回滚，支持 `--dry-run` 预览回滚与一键安全复原，状态自动标记 `undone` 防止重复执行；
+  - **BK-0035 (多账号认证管理与动态切换)**: 重构升级 `TokenManager`（`auth.py`），支持以账号别名存储多套凭证，并自动平滑升级旧单账号缓存文件；新增 `bdpan auth list`、`bdpan auth switch <alias>`、`bdpan auth login [--account <alias>]` 子命令；CLI 根命令新增全局 `--account <alias>` 参数，支持单次命令动态指定网盘租户；
+  - 全量测试套件从 140 项扩充至 155 项全绿通过（`155 passed in 5.84s`）。
 - **feat(transfer)**: Phase 2 传输核心能力补齐与极速优化交付（BK-0032~BK-0033）。
   - **BK-0032 (大文件下载与直链提取)**: 新增 `Downloader` 模块（`downloader.py`）与 `bdpan download`、`bdpan dlink` 终端命令；调用 `MultimediafileApi.xpanmultimediafilemetas(dlink=1)` 获取真实直链，全局强制注入 `User-Agent: pan.baidu.com` 请求头防 403 限速；支持大文件分块断点续传（基于 `.tmp` 临时文件与 HTTP Range 协议）与同名跳过/覆盖保护；`dlink` 命令支持 `--aria2` 与 `--curl` 直接导出多线程高速下载脚本；
   - **BK-0033 (极速秒传与动态机房接入)**: 升级 `Uploader`（`uploader.py`），在 `precreate` 预上传阶段若服务端返回 `return_type == 2`（特征命中云端秒传）则直接跳过分块数据传输直接调用 `_create`，实现 0 流量秒传；新增 `locate_upload_host` 原语，上传前动态向百度请求延时最低的最优机房 host 列表，提升跨网络运营商传输稳定性；

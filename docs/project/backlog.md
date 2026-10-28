@@ -1,7 +1,7 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.9.0
+> - **文档版本**: V1.10.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-10-28
 > - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
@@ -12,10 +12,6 @@
 （暂无进行中任务）
 
 ## 计划中 (路线图演进任务)
-
-### 阶段三：安全运维体系与多账号隔离 (Phase 3)
-- [ ] BK-0034 操作流水审计与逆向撤销体系（本地落盘 `.bdpan_ops/<op_id>.json` 记录批量更名/移动/去重等操作映射；新增 `bdpan ops list/show` 以及 `bdpan undo <op_id>` 逆向撤销命令，支持 `--dry-run` 预览与一键安全复原）
-- [ ] BK-0035 多账号认证管理与动态切换（升级 TokenManager 支持多账号别名存储；新增 `bdpan auth list/add/switch` 子命令，CLI 根命令新增全局 `--account <alias>` 参数支持多网盘账号无缝切换）
 
 ### 阶段四：媒体可观测性与 AI 原生集成 (Phase 4)
 - [ ] BK-0036 全局结构化输出与媒体深度元数据解析（所有 CLI 子命令支持 `--json` 标准信封输出；新增 `bdpan info <file>` 探测视频编码/分辨率/时长/码率，新增 `bdpan stats <dir>` 目录聚合容量统计）
@@ -36,6 +32,8 @@
 
 ## 已关闭
 
+- [x] BK-0035 多账号认证管理与动态切换（升级 TokenManager 支持多账号别名存储与自动平滑迁移旧单账号缓存；新增 `bdpan auth list/switch/login` 子命令，CLI 根命令新增全局 `--account <alias>` 参数支持多网盘账号隔离与即时切换；单测验证通过，2026-10-28）
+- [x] BK-0034 操作流水审计与逆向撤销体系（本地落盘 `.bdpan_ops/<op_id>.json` 结构化记录批量更名/移动操作映射清单；新增 `bdpan ops list/show` 以及 `bdpan undo <op_id>` 逆向撤销命令，支持 `--dry-run` 预览与一键安全复原；单测覆盖正向记录与逆向撤销，2026-10-28）
 - [x] BK-0033 极速秒传机制与动态最优机房接入（大文件上传 `precreate` 命中 `return_type == 2` 时跳过分片上传直接创建，0 流量瞬间完成；新增 `locate_upload_host` 动态获取最优上传服务器 host，单测验证通过，2026-10-28）
 - [x] BK-0032 大文件下载与断点续传引擎（新增 `Downloader` 模块与 `bdpan download`、`bdpan dlink` 子命令；调用 `filemetas&dlink=1` 获取真实下载直链，注入 `User-Agent: pan.baidu.com` 防限速，支持分块断点续传与导出 aria2c/curl 命令，单测全绿，2026-10-28）
 - [x] BK-0031 GitHub Actions 自动化 CI/CD 与跨平台单文件二进制发布（配置多 Python 版本矩阵测试 `ci.yml`、PyPI Trusted Publishing 自动化发版、PyInstaller 编译 Linux/macOS/Windows 单文件免运行环境二进制可执行档，实测本地单文件二进制 Exit Code 0，2026-10-28）

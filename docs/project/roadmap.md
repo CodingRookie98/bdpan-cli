@@ -82,34 +82,34 @@
 
 ### 阶段一：开源就绪与打包分发基建 (Phase 1: Foundations & Packaging)
 **目标**：扫清打包阻断，完成标准包构建与自动化发布流水线，正式开源。
-- [ ] **Vendor SDK 内联化与相对路径解耦**：移除 `tool.uv.sources`，将依赖内聚至 `src/bdpan_cli/_vendor/`，支持标准 `uv build`。
-- [ ] **开源工程标准建立**：补充 `LICENSE` (MIT)、`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、Issue/PR Templates。
-- [ ] **GitHub Actions 自动化流水线**：
+- [x] **Vendor SDK 内联化与相对路径解耦**：移除 `tool.uv.sources`，将依赖内聚至 `src/bdpan_cli/_vendor/`，支持标准 `uv build`。
+- [x] **开源工程标准建立**：补充 `LICENSE` (MIT)、`CONTRIBUTING.md`、`CODE_OF_CONDUCT.md`、Issue/PR Templates。
+- [x] **GitHub Actions 自动化流水线**：
   - `ci.yml`：Push/PR 多版本测试与文档检查；
   - `pypi-publish.yml`：基于 GitHub Trusted Publishing 自动化发版至 PyPI；
   - `release-binaries.yml`：PyInstaller 跨平台编译打包与 Assets 发布。
-- [ ] **配置与凭据解耦完善**：支持全局配置文件路径 `~/.config/bdpan/` 或环境变量自定义指定，防止工作区混淆。
+- [x] **配置与凭据解耦完善**：支持全局配置文件路径 `~/.config/bdpan/` 或环境变量自定义指定，防止工作区混淆。
 
 ### 阶段二：传输核心能力补齐与极速优化 (Phase 2: Core Transfer & Performance)
 **目标**：补齐文件下载与秒传上传，实现全能力闭环与极致传输体验（对标 `boxplayer` 核心优势）。
-- [ ] **大文件下载与断点续传 (`bdpan download`)**：
+- [x] **大文件下载与断点续传 (`bdpan download`)**：
   - 调用 `filemetas&dlink=1` 获取真实下载直链；
   - 注入 `User-Agent: pan.baidu.com` 请求头规避防盗链 403 限速；
   - 支持多线程并发分块下载、中断自动恢复（`.download_state` 状态记忆）。
-- [ ] **直链与导出命令 (`bdpan dlink`)**：
+- [x] **直链与导出命令 (`bdpan dlink`)**：
   - 快速输出单文件/批量文件的直链 URL、有效时长；
   - 支持输出配套 `aria2c` / `curl` / `wget` 下载命令脚本，便于外部离线下载工具接入。
-- [ ] **极速秒传与动态机房接入 (`bdpan upload`)**：
+- [x] **极速秒传与动态机房接入 (`bdpan upload`)**：
   - 在大文件上传的 `precreate` 阶段，计算首片 256KB MD5 与全量 MD5 进行云端碰撞检测；命中时直接触发秒传完成，0 网络流量消耗；
   - 上传分片前调用 `locateupload` 接口动态获取距离当前客户端物理延时最低、带宽最优的机房服务器 host，显著降低传输抖动与超时重试。
 
 ### 阶段三：安全运维与多账号体系 (Phase 3: Safety Ops & Multi-Account)
 **目标**：保障生产级运维安全，实现操作可逆与多身份无缝切换。
-- [ ] **操作流水审计与逆向撤销 (`bdpan ops` & `bdpan undo`)**：
+- [x] **操作流水审计与逆向撤销 (`bdpan ops` & `bdpan undo`)**：
   - 所有批量重命名、批量移动、清理与去重操作均落盘结构化审计日志至 `~/.config/bdpan/ops/<op_id>.json`；
   - 新增 `bdpan ops list` 和 `bdpan ops show <op_id>` 查阅历史操作详情；
   - 新增 `bdpan undo <op_id>` 命令：反向解析操作记录，生成逆向变更 Plan，支持 `--dry-run` 预览回滚与一键安全复原，防止误操作。
-- [ ] **多账号配置与动态切换 (`bdpan auth`)**：
+- [x] **多账号配置与动态切换 (`bdpan auth`)**：
   - 支持管理多组网盘凭证与别名（如 `personal`、`work`、`backup`）；
   - 新增 `bdpan auth list`、`bdpan auth add <alias>`、`bdpan auth switch <alias>`；
   - 全局支持 `--account <alias>` 参数，单次命令定向指定操作账号。
