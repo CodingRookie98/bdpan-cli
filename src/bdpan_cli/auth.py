@@ -16,7 +16,7 @@ from bdpan_cli._vendor.openapi_client.rest import ApiException
 from bdpan_cli.config import AppConfig
 
 # 默认用户端 Token 凭据路径遵循 XDG 规范 (~/.config/bdpan/tokens.json)
-DEFAULT_CONFIG_DIR = Path.home() / ".config" / "bdpan"
+DEFAULT_CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "bdpan"
 DEFAULT_TOKEN_FILE = DEFAULT_CONFIG_DIR / "tokens.json"
 LEGACY_TOKEN_CACHE = Path(__file__).resolve().parents[2] / ".baidupan_tokens.json"
 
@@ -193,10 +193,22 @@ class TokenManager:
             device = auth.oauth_token_device_code(self._config.app_key, SCOPE)
             interval = max(int(device.interval or 5), 3)
             deadline = time.time() + int(device.expires_in or 300)
-            print(
-                f"请打开 {device.verification_url} ，输入用户码 {device.user_code} 并确认授权",
-                flush=True,
-            )
+
+            # 尝试自动在默认浏览器中打开授权页面
+            try:
+                import webbrowser
+                webbrowser.open(device.verification_url)
+            except Exception:
+                pass
+
+            print("\n" + "=" * 66, flush=True)
+            print("🔗 请在浏览器中打开授权页面完成登录：", flush=True)
+            print(f"   {device.verification_url}", flush=True)
+            print("\n🔑 您的设备授权码 (User Code)：", flush=True)
+            print(f"   👉  {device.user_code}  👈", flush=True)
+            print("\n（系统已尝试唤起默认浏览器；如未弹出，请手动复制上述链接访问并输入授权码）", flush=True)
+            print("=" * 66 + "\n", flush=True)
+            print("⏳ 正在等待网页端授权确认...", flush=True)
             while time.time() < deadline:
                 time.sleep(interval)
                 try:
@@ -213,6 +225,6 @@ class TokenManager:
                         interval += 5
                         continue
                     raise RuntimeError(f"设备码授权失败：{body}") from e
-                print("授权成功", flush=True)
+                print("🎉 授权成功！", flush=True)
                 return self._save_cache(self._to_cache(response))
         raise AuthorizationNeeded("设备码已过期，请重新运行")

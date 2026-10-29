@@ -4,6 +4,14 @@
 
 ## 2026-10-29
 
+- **feat(auth)**: 纯净 BYOK 认证配置、XDG 全局配置链条与优雅登录体验（BK-0043）。
+  - **BK-0043 (BYOK 凭证配置与一键浏览器登录)**:
+    - **XDG 全局配置支持与优先级加载**: `config.py` 实现配置级联加载：`os.environ` ➔ 当前目录 `.env` ➔ 全局配置 `~/.config/bdpan/.env`（支持 `BDPAN_CONFIG_PATH` 环境变量覆盖）；新增 `save_global_config` 将凭据写入全局 `.env` 并自动设置 `0o600` 安全访问权限；
+    - **优雅异常捕获与 Traceback 清零**: 消除凭据缺失时的原始 Python 异常堆栈，定义 `ConfigError(RuntimeError)` 并在 `cli.py` 顶层统一拦截，输出友好清晰的中文化配置与引导指令（`Exit Code 1`）；在 `--json` 模式下返回标准化失败信封；
+    - **全新 `bdpan auth config` 子命令**: 提供 `--app-key`、`--secret-key`、`--show`（脱敏查看凭证来源与状态）、`--path`（打印配置文件物理路径）以及交互式终端引导输入，用户全局配置一次后可在任意目录执行 `bdpan`；
+    - **一键浏览器唤起**: `_device_flow` 在获取设备码后自动通过 `webbrowser.open` 唤起系统默认浏览器打开百度网盘设备授权页面，终端大字高亮显示 User Code，免去繁琐的手动复制打开步骤；
+    - **单测全绿保障**: 新增 `tests/test_config.py`（9 项单元测试）并扩展 `tests/test_auth.py`（1 项单元测试），全量回归测试套件增至 193 项全绿通过（`193 passed in 8.78s`）。
+
 - **feat(cli)**: 引入 `_version.py` 版本单一真相源与 CLI `-V`/`--version` 版本自省支持，正式发布 v0.1.0 开源首发版（BK-0042）。
   - **BK-0042 (首个开源版本 v0.1.0 与版本自省支持)**:
     - **版本单一真相源**: 新增 `src/bdpan_cli/_version.py` 定义 `__version__ = "0.1.0"`，在 `src/bdpan_cli/__init__.py` 中统一对外暴露 `__version__`；

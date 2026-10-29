@@ -33,6 +33,20 @@ Download platform-specific standalone single-file binaries directly from [GitHub
 - `bdpan-macos-arm64` (macOS Apple Silicon)
 - `bdpan-windows-amd64.exe` (Windows x86_64)
 
+### Quickstart
+
+```bash
+# 1. Configure Baidu Open Platform credentials (once, saved to ~/.config/bdpan/.env)
+bdpan auth config --app-key <YOUR_APP_KEY> --secret-key <YOUR_SECRET_KEY>
+
+# 2. Authorize and login netdisk account (automatically pops up default browser)
+bdpan auth login
+
+# 3. Ready to use
+bdpan whoami
+bdpan ls /
+```
+
 ---
 
 ## CLI Command Quick Reference
@@ -69,10 +83,13 @@ bdpan ops list [--limit 20]                  # Inspect audit logs of mutating op
 bdpan ops show <op_id>                       # View detailed mapping for an operation
 bdpan undo <op_id> [--dry-run] [-y]          # Reverse rollback an operation batch
 
-# Multi-Account Authentication & Tenant Isolation
+# Multi-Account Authentication & Configuration
+bdpan auth config --app-key <key> --secret-key <secret> # Save credentials to global config (~/.config/bdpan/.env)
+bdpan auth config --show                      # Inspect current config source and masked credentials
+bdpan auth config --path                      # Print path to global config file
+bdpan auth login [--account <alias>]         # Authorize via device flow (auto-launches default browser)
 bdpan auth list                              # List saved netdisk accounts and token status
 bdpan auth switch <alias>                    # Switch default active account
-bdpan auth login [--account <alias>]         # Authorize/login to a specific account
 bdpan --account <alias> <subcommand>         # Run command under a specific account tenant
 
 # Media Observability & Global Options

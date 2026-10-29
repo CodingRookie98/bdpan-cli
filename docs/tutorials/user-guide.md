@@ -54,26 +54,31 @@ bdpan --version
 ### 2.1 申请开发者凭据
 1. 访问 [百度网盘开放平台控制台](https://pan.baidu.com/union/console/applist)；
 2. 登录您的百度账号，创建应用并获取：
-   - **AppKey**（对应客户端环境变量 `BAIDU_PAN_APP_KEY`）
-   - **SecretKey**（对应客户端环境变量 `BAIDU_PAN_SECRET_KEY`）
-   - **SignKey**（可选，开通签名时填写 `BAIDU_PAN_SIGN_KEY`）
+   - **AppKey**（对应环境变量 `BAIDU_APP_KEY`）
+   - **SecretKey**（对应环境变量 `BAIDU_SECRET_KEY`）
+   - **SignKey**（可选，开通签名时填写 `BAIDU_SIGN_KEY`）
 
-### 2.2 本地凭证配置 (`.env`)
-在项目或工作目录下复制 `.env.example` 为 `.env`：
+### 2.2 开发者凭证配置（推荐 CLI 命令写入）
+最便捷的方式是使用 `bdpan auth config` 一键写入全局 XDG 配置（`~/.config/bdpan/.env`，权限 `0o600`）：
 ```bash
-cp .env.example .env
+bdpan auth config --app-key your_actual_app_key --secret-key your_actual_secret_key
 ```
-编辑 `.env` 填入您的密钥：
+
+也可手动配置环境变量或当前目录 `.env` 文件：
 ```ini
-BAIDU_PAN_APP_KEY=your_actual_app_key
-BAIDU_PAN_SECRET_KEY=your_actual_secret_key
-BAIDU_PAN_SIGN_KEY=
+BAIDU_APP_KEY=your_actual_app_key
+BAIDU_SECRET_KEY=your_actual_secret_key
+```
+
+查看配置状态与脱敏信息：
+```bash
+bdpan auth config --show
 ```
 
 ### 2.3 账号首次登录授权
-在配置好 `.env` 后，运行任一查询命令（如 `bdpan whoami` 或 `bdpan auth login`）：
-- **桌面有头环境**：CLI 会自动在默认浏览器中打开百度授权页面，登录并确认授权后自动将 Token 凭据安全存储于遵循 XDG 规范的用户目录 `~/.config/bdpan/tokens.json`（权限 `0o600`，由 `TokenManager` 自动管理并在剩余不足 1 天时静默刷新）。
-- **无头服务器/SSH 环境**：终端会输出完整的授权登录 URL。请在任意外部浏览器中打开该链接，登录授权完成后将浏览器地址栏跳转后的完整 URL 或 `code` 复制并粘贴回终端，即可完成绑定。
+在配置好开发者凭据后，运行 `bdpan auth login`：
+- **桌面环境**：CLI 会自动在默认浏览器中唤起百度设备授权页面，并在终端以大字高亮显示授权码（User Code）。确认授权后，Token 凭据安全存储于遵循 XDG 规范的用户目录 `~/.config/bdpan/tokens.json`（权限 `0o600`，由 `TokenManager` 自动管理并在剩余不足 1 天时静默刷新）。
+- **无头服务器/SSH 环境**：终端会输出完整的授权登录 URL。请在任意外部浏览器中打开该链接并输入终端显示的 User Code 完成确认即可。
 - **向下无缝兼容**：系统初次启动时，若检测到旧版项目根目录下的 `.baidupan_tokens.json`，会自动将其无缝迁移至 `~/.config/bdpan/tokens.json`。
 
 ---
@@ -274,6 +279,9 @@ bdpan undo 20261029_095105_mv_7ac7a2 -y
 支持在单机管理多个不同的百度网盘账号，互不干扰。
 
 ```bash
+# 配置开发者凭证（写入全局 ~/.config/bdpan/.env）
+bdpan auth config --app-key <key> --secret-key <secret>
+
 # 列出本地保存的所有账号别名与 Token 有效期
 bdpan auth list
 

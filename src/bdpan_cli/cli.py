@@ -8,11 +8,17 @@ import logging
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from bdpan_cli.account import AccountClient, AccountError
 from bdpan_cli.auth import TOKEN_CACHE, TokenManager
-from bdpan_cli.config import load_config
+from bdpan_cli.config import (
+    ConfigError,
+    get_global_config_path,
+    load_config,
+    save_global_config,
+)
 from bdpan_cli.dedup import execute_dedup, plan_dedup
 from bdpan_cli.downloader import DownloadError, Downloader
 from bdpan_cli.file_manager import FileManager, FileManagerError
@@ -761,6 +767,85 @@ def cmd_undo(args: argparse.Namespace) -> int:
 def cmd_auth(args: argparse.Namespace) -> int:
     """网盘账号认证与多租户管理。"""
     subcmd = getattr(args, "auth_subcmd", None)
+
+    if subcmd == "config":
+        # 1. 打印全局配置文件路径
+        if getattr(args, "path", False):
+            print(str(get_global_config_path()))
+            return 0
+
+        # 2. 显示当前配置状态（脱敏）
+        if getattr(args, "show", False):
+            global_path = get_global_config_path()
+            local_path = Path.cwd() / ".env"
+            has_env = bool(os.getenv("BAIDU_APP_KEY") and os.getenv("BAIDU_SECRET_KEY"))
+
+            try:
+                cfg = load_config()
+                app_key = cfg.app_key
+                secret_key = cfg.secret_key
+                masked_app = app_key[:3] + "..." + app_key[-3:] if len(app_key) > 6 else "***"
+                masked_secret = secret_key[:3] + "..." + secret_key[-3:] if len(secret_key) > 6 else "***"
+
+                source = "环境变量" if has_env else ("当前目录 .env" if local_path.exists() else f"全局配置 ({global_path})")
+                if getattr(args, "json", False):
+                    return _output_envelope({
+                        "source": source,
+                        "global_path": str(global_path),
+                        "app_key": masked_app,
+                        "secret_key": masked_secret,
+                    })
+                print("\n📋 百度网盘开放平台开发者凭证配置状态:")
+                print(f"  • 配置来源: {source}")
+                print(f"  • BAIDU_APP_KEY:    {masked_app}")
+                print(f"  • BAIDU_SECRET_KEY: {masked_secret}")
+                print(f"  • 全局配置文件位置: {global_path}\n")
+                return 0
+            except ConfigError as e:
+                if getattr(args, "json", False):
+                    return _output_envelope(None, success=False, code=1, error=str(e))
+                print("\n⚠️ 尚未检测到有效开发者凭证配置。", file=sys.stderr)
+                print(f"  全局配置文件位置: {global_path}", file=sys.stderr)
+                print("  提示：请运行 'bdpan auth config --app-key <KEY> --secret-key <SECRET>' 写入全局配置。\n", file=sys.stderr)
+                return 1
+
+        # 3. 写入配置
+        app_key = getattr(args, "app_key", None)
+        secret_key = getattr(args, "secret_key", None)
+
+        if not app_key or not secret_key:
+            if sys.stdin.isatty() and not getattr(args, "json", False):
+                print("请输入百度网盘开放平台的开发者凭证（可从 https://pan.baidu.com/union 获取）：")
+                if not app_key:
+                    try:
+                        app_key = input("  BAIDU_APP_KEY: ").strip()
+                    except (EOFError, KeyboardInterrupt):
+                        print("\n操作已取消。")
+                        return 1
+                if not secret_key:
+                    try:
+                        secret_key = input("  BAIDU_SECRET_KEY: ").strip()
+                    except (EOFError, KeyboardInterrupt):
+                        print("\n操作已取消。")
+                        return 1
+
+        if not app_key or not secret_key:
+            msg = (
+                "缺少凭据参数。请提供 --app-key 与 --secret-key，例如：\n"
+                "  bdpan auth config --app-key YOUR_APP_KEY --secret-key YOUR_SECRET_KEY"
+            )
+            if getattr(args, "json", False):
+                return _output_envelope(None, success=False, code=1, error=msg)
+            print(f"❌ {msg}", file=sys.stderr)
+            return 1
+
+        saved_path = save_global_config(app_key, secret_key)
+        if getattr(args, "json", False):
+            return _output_envelope({"saved_path": str(saved_path)})
+        print(f"✅ 开发者凭证已成功保存至全局配置: {saved_path}")
+        print("💡 您现在可以在任意目录直接运行 'bdpan auth login' 或其他 bdpan 命令。")
+        return 0
+
     tm = _get_token_manager(args)
 
     if subcmd == "switch":
@@ -1320,14 +1405,32 @@ def build_parser() -> argparse.ArgumentParser:
     p_auth = subparsers.add_parser(
         "auth",
         help="网盘账号认证与多账号管理",
-        description="百度网盘多账号认证管理系统，支持多租户凭证隔离存储、活跃账号切换与单独授权。",
+        description="百度网盘多账号认证管理系统，支持多租户凭证隔离存储、活跃账号切换、快速配置与单独授权。",
         epilog="""示例:
+  bdpan auth config --app-key YOUR_KEY --secret-key YOUR_SECRET
+  bdpan auth config --show
+  bdpan auth login
   bdpan auth list
-  bdpan auth switch work_pan
-  bdpan auth login --account personal_pan""",
+  bdpan auth switch work_pan""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     auth_sub = p_auth.add_subparsers(dest="auth_subcmd", help="认证子命令")
+    p_auth_config = auth_sub.add_parser(
+        "config",
+        help="配置或查看百度网盘开发者凭据 (AppKey / SecretKey)",
+        description="配置或查看百度网盘开放平台开发者凭据。凭据将安全保存在用户全局配置目录中 (~/.config/bdpan/.env)。",
+        epilog="""示例:
+  bdpan auth config --app-key YOUR_KEY --secret-key YOUR_SECRET
+  bdpan auth config --show
+  bdpan auth config --path""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_auth_config.add_argument("--app-key", help="百度开放平台 App Key (Client ID)")
+    p_auth_config.add_argument("--secret-key", help="百度开放平台 Secret Key (Client Secret)")
+    p_auth_config.add_argument("--show", action="store_true", help="显示当前配置来源与脱敏凭证")
+    p_auth_config.add_argument("--path", action="store_true", help="输出全局配置文件存储路径")
+    p_auth_config.set_defaults(func=cmd_auth)
+
     p_auth_list = auth_sub.add_parser(
         "list",
         help="列出本地所有网盘账号与到期状态",
@@ -1421,7 +1524,13 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    return args.func(args)
+    try:
+        return args.func(args)
+    except ConfigError as e:
+        if getattr(args, "json", False):
+            return _output_envelope(None, success=False, code=1, error=str(e))
+        print(f"\n❌ 配置缺失: {e}\n", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

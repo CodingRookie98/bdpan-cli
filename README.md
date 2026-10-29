@@ -33,6 +33,20 @@ pip install bdpan-cli
 - `bdpan-macos-arm64` (macOS Apple Silicon)
 - `bdpan-windows-amd64.exe` (Windows x86_64)
 
+### 快速开始 (Quickstart)
+
+```bash
+# 1. 配置百度开放平台凭证（仅需一次，保存在 ~/.config/bdpan/.env）
+bdpan auth config --app-key <YOUR_APP_KEY> --secret-key <YOUR_SECRET_KEY>
+
+# 2. 授权登录网盘账号（自动唤起默认浏览器打开授权页）
+bdpan auth login
+
+# 3. 立即使用
+bdpan whoami
+bdpan ls /
+```
+
 ---
 
 ## 命令行使用 (CLI)
@@ -66,11 +80,14 @@ bdpan ops list [--limit 20]               # 查看关键变更操作流水审计
 bdpan ops show <op_id>                    # 查看某次操作的明细与映射清单
 bdpan undo <op_id> [--dry-run] [-y]       # 逆向撤销回滚指定批次操作（支持预演）
 
-# 多账号认证与隔离 (Multi-Account Auth)
-bdpan auth list                           # 查看本地保存的网盘账号及凭证有效性
-bdpan auth switch <alias>                 # 切换当前默认活跃账号
-bdpan auth login [--account <alias>]      # 登录/重新授权指定账号别名
-bdpan --account <alias> <subcommand>      # 临时以指定账号执行单次命令（多租户并发隔离）
+# 认证配置与多账号管理 (Auth & Multi-Account)
+bdpan auth config --app-key <key> --secret-key <secret> # 快速写入全局开发者凭据 (~/.config/bdpan/.env)
+bdpan auth config --show                      # 查看当前凭据来源与脱敏信息
+bdpan auth config --path                      # 打印全局配置文件物理路径
+bdpan auth login [--account <alias>]          # 启动设备码授权（自动唤起默认浏览器并高亮授权码）
+bdpan auth list                               # 查看本地保存的网盘账号及凭证有效性
+bdpan auth switch <alias>                     # 切换当前默认活跃账号
+bdpan --account <alias> <subcommand>          # 临时以指定账号执行单次命令（多租户并发隔离）
 
 # 媒体可观测性与全局选项 (Media Insights & Global Options)
 bdpan info /影视/电影/Inception.mkv        # 探测视频精准分辨率(4K/1080P)、时长、HEVC编码与音轨

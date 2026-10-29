@@ -118,3 +118,41 @@ def test_token_manager_auto_migrate_legacy_file(tmp_path, monkeypatch):
     assert migrated_json["accounts"]["default"]["access_token"] == "legacy_tok"
 
 
+def test_device_flow_triggers_browser_open(capsys):
+    """验证设备码授权流程尝试自动打开浏览器并打印醒目授权码。"""
+    tm = TokenManager(_make_config())
+
+    mock_device = MagicMock()
+    mock_device.verification_url = "https://pan.baidu.com/device"
+    mock_device.user_code = "ABCD-1234"
+    mock_device.device_code = "mock_device_code"
+    mock_device.interval = 1
+    mock_device.expires_in = 10
+
+    mock_resp = MagicMock()
+    mock_resp.access_token = "new_flow_token"
+    mock_resp.refresh_token = "new_flow_refresh"
+    mock_resp.expires_in = 3600
+
+    with patch("bdpan_cli.auth.openapi_client.ApiClient") as mock_client_cls, \
+         patch("bdpan_cli.auth.AuthApi") as mock_auth_cls, \
+         patch("webbrowser.open") as mock_browser_open:
+
+        mock_auth = MagicMock()
+        mock_auth.oauth_token_device_code.return_value = mock_device
+        mock_auth.oauth_token_device_token.return_value = mock_resp
+        mock_auth_cls.return_value = mock_auth
+
+        token = tm._device_flow()
+        assert token["access_token"] == "new_flow_token"
+
+        # 验证调用了 webbrowser.open 自动唤起浏览器
+        mock_browser_open.assert_called_once_with("https://pan.baidu.com/device")
+
+        # 验证终端输出了醒目的授权地址与用户码
+        captured = capsys.readouterr()
+        assert "https://pan.baidu.com/device" in captured.out
+        assert "ABCD-1234" in captured.out
+
+
+

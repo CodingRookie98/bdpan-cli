@@ -65,7 +65,7 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 | `dlink` | 查询下载直链或导出多线程下载命令 | `uv run bdpan dlink /videos/movie.mkv [--aria2 \| --curl]` |
 | `ops` | 查看操作审计流水日志 | `uv run bdpan ops list [--limit 20]`<br>`uv run bdpan ops show <op_id>` |
 | `undo` | 逆向撤销历史批量操作回滚复原 | `uv run bdpan undo <op_id> [--dry-run] [-y]` |
-| `auth` | 网盘账号凭证管理与多账号切换 | `uv run bdpan auth list`<br>`uv run bdpan auth switch <alias>`<br>`uv run bdpan auth login [--account <alias>]` |
+| `auth` | 网盘账号凭证管理与多账号切换 | `uv run bdpan auth config --app-key <key> --secret-key <secret>`<br>`uv run bdpan auth config --show`<br>`uv run bdpan auth list`<br>`uv run bdpan auth switch <alias>`<br>`uv run bdpan auth login [--account <alias>]` |
 | `info` | 探测视频媒体深度元数据（分辨率/编码/时长） | `uv run bdpan info /videos/movie.mkv [--json]` |
 | `stats` | 递归聚合统计目录总容量与媒体格式分布 | `uv run bdpan stats /videos/movies [--depth N] [--json]` |
 | `mcp` | 启动原生 Model Context Protocol Server (stdio) | `uv run bdpan mcp` |
@@ -179,15 +179,21 @@ uv run bdpan undo op_20261028_123456 --dry-run
 uv run bdpan undo op_20261028_123456 -y
 ```
 
-### 场景五：多网盘账号管理与隔离操作
+### 场景五：开发者凭证配置、一键登录与多账号管理
 ```bash
-# 查看本地保存的所有账号
+# 1. 首次配置开发者凭据（写入全局 ~/.config/bdpan/.env，仅需配置一次）
+uv run bdpan auth config --app-key YOUR_KEY --secret-key YOUR_SECRET
+
+# 2. 授权登录当前账号（自动唤起默认浏览器并输出大字授权码）
+uv run bdpan auth login
+
+# 3. 查看本地保存的所有账号
 uv run bdpan auth list
 
-# 切换当前默认活跃账号
+# 4. 切换当前默认活跃账号
 uv run bdpan auth switch work
 
-# 单次命令临时使用备份账号执行，不影响当前默认账号
+# 5. 单次命令临时使用备份账号执行，不影响当前默认账号
 uv run bdpan --account backup ls /videos
 ```
 
