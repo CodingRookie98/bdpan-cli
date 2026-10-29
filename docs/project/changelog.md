@@ -4,6 +4,10 @@
 
 ## 2026-10-29
 
+- **feat(cli)**: CLI 全局 --help 体验与实操示例完善及 Skill 安装审批治理（BK-0039）。
+  - **BK-0039 (--help 丰富度与实战样例)**: `cli.py` 为全量 32 个一级与二级子命令全面增补 `description` 功能定位概述与底部的 `epilog` 实操高频调用样例（涵盖单源改名/多源复制、大文件秒传与断点续传、直链提取与多线程导出、影视刮削预演应用与自定义模板组合、操作审计回滚、多账号管理隔离与 MCP stdio 启动等）；统一配置 `RawDescriptionHelpFormatter` 保留排版结构；完善参数默认值标注；
+  - **智能体 Skill 治理与审批红线**: 更新 `skills/bdpan-cli/SKILL.md`，增加 5 种安装指引，并确立在环境中缺失 `bdpan` CLI 时智能体必须暂停并明确向用户获得安装审批的严格军规；
+  - **单元测试扩充**: 新增 `test_cli_subparsers_rich_help`，抽样与全量回归测试套件增至 175 项全绿通过（`175 passed in 5.79s`）。
 - **feat(scraper)**: 电影刮削目录命名自定义模板支持（BK-0038）。
   - **BK-0038 (命名模板自由组合与容错)**: `scraper.py` 新增 `MovieMetadata.format_name(template)` 方法，引入 `SafeDict` 容错字典，支持 `{title}`, `{original_title}`, `{year}`, `{id}`, `{imdb_id}`, `{tmdb_id}`, `{edition}` 等占位符自由组合；`formatted_name` 保持无参默认方案 A 命名；
   - **CLI 参数支持**: `preview_scrape.py` 与 `foldering.py` 分别扩充 `name_format` 传参；`cli.py` 在 `scrape preview` 与 `scrape foldering` 注册 `--format` 参数，支持 Plex 官方模板、点号紧凑模板与自定义中英文格式；未指定时默认保持方案 A 规范不变，100% 向后兼容；

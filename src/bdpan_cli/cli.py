@@ -875,7 +875,19 @@ def cmd_mcp(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bdpan",
-        description="百度网盘工程化 CLI 管理工具",
+        description="百度网盘工程化 CLI 管理工具\n提供文件组织、大文件断点续传、影视媒体规范化刮削、安全审计流水与原生 MCP 集成。",
+        epilog="""示例:
+  bdpan ls /videos/movies
+  bdpan upload ./local.mkv /videos/movies/
+  bdpan download /videos/movies/Inception.mkv -d ./downloads/
+  bdpan scrape foldering /videos/unscraped --dry-run
+  bdpan ops list
+  bdpan mcp
+
+文档与支持:
+  用户指南: docs/tutorials/user-guide.md
+  项目地址: https://github.com/CodingRookie98/bdpan-cli""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "--account",
@@ -890,13 +902,31 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", help="可用子命令")
 
     # 1. ls
-    p_ls = subparsers.add_parser("ls", help="列出网盘指定路径内容")
+    p_ls = subparsers.add_parser(
+        "ls",
+        help="列出网盘指定路径内容",
+        description="列出百度网盘指定路径下的文件与子目录列表。",
+        epilog="""示例:
+  bdpan ls
+  bdpan ls /videos/movies
+  bdpan ls /videos/movies --limit 500
+  bdpan ls /videos/movies --json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_ls.add_argument("path", nargs="?", default="/", help="网盘目录路径 (默认: /)")
     p_ls.add_argument("--limit", type=int, default=1000, help="最多读取条目数 (默认: 1000)")
     p_ls.set_defaults(func=cmd_ls)
 
     # 2. mkdir
-    p_mkdir = subparsers.add_parser("mkdir", help="在网盘中创建新目录")
+    p_mkdir = subparsers.add_parser(
+        "mkdir",
+        help="在网盘中创建新目录",
+        description="在百度网盘中递归创建新目录（若目录已存在则安全跳过）。",
+        epilog="""示例:
+  bdpan mkdir /videos/movies/科幻
+  bdpan mkdir /backup/2026/10""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_mkdir.add_argument("path", help="待创建的目录路径")
     p_mkdir.set_defaults(func=cmd_mkdir)
 
@@ -904,6 +934,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_mv = subparsers.add_parser(
         "mv",
         help="移动网盘文件或目录（多源时目标须为已存在目录；单源支持移动改名）",
+        description="移动网盘文件或目录（操作自动落盘流水审计，支持 bdpan undo 逆向撤销）。\n多源参数时目标必须为已存在目录；单源参数时支持移动并改名。",
+        epilog="""示例:
+  bdpan mv /videos/old_name.mkv /videos/movies/new_name.mkv   # 单源移动并更名
+  bdpan mv /videos/f1.mkv /videos/f2.mkv /videos/movies/    # 多源批量移入已存在目录""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_mv.add_argument("srcs", nargs="+", help="一个或多个源路径")
     p_mv.add_argument("dest", help="目标目录路径（单源时可为 目标目录/新名）")
@@ -913,6 +948,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_cp = subparsers.add_parser(
         "cp",
         help="复制网盘文件或目录（多源时目标须为已存在目录；单源目标为已存在目录时复制入内，否则视为 目标目录/新名）",
+        description="复制网盘文件或目录（底层单批次最大 50 项安全防护）。\n多源参数时目标必须为已存在目录；单源目标为已存在目录时复制入内，否则视为 目标目录/新名。",
+        epilog="""示例:
+  bdpan cp /videos/source.mkv /backup/movies/              # 复制入目录保持原名
+  bdpan cp /videos/source.mkv /backup/movies/target.mkv    # 复制并指定新名称
+  bdpan cp /videos/f1.mkv /videos/f2.mkv /backup/movies/   # 多源批量复制""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_cp.add_argument("srcs", nargs="+", help="一个或多个源路径")
     p_cp.add_argument("dest", help="目标目录路径，或 目标目录/新名（仅单源）")
@@ -922,27 +963,57 @@ def build_parser() -> argparse.ArgumentParser:
     p_rm = subparsers.add_parser(
         "rm",
         help="删除网盘文件或目录（默认交互确认，-y 跳过；服务端移入回收站）",
+        description="删除网盘文件或目录。默认开启交互式确认提示，删除后移入百度网盘云端回收站。",
+        epilog="""示例:
+  bdpan rm /videos/junk.mkv               # 交互式提示确认后删除
+  bdpan rm /videos/f1.mkv /videos/f2.mkv -y # 免交互确认直接移入回收站""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_rm.add_argument("paths", nargs="+", help="待删除的一个或多个路径")
     p_rm.add_argument("-y", "--yes", action="store_true", help="跳过确认直接删除")
     p_rm.set_defaults(func=cmd_rm)
 
     # 3.3 rename
-    p_rename = subparsers.add_parser("rename", help="原地重命名网盘文件或目录")
+    p_rename = subparsers.add_parser(
+        "rename",
+        help="原地重命名网盘文件或目录",
+        description="原地重命名网盘文件或目录（操作自动落盘流水审计，支持 bdpan undo 逆向撤销）。",
+        epilog="""示例:
+  bdpan rename /videos/movies/Inception.2010.mkv "盗梦空间 (2010).mkv" """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_rename.add_argument("path", help="待重命名的文件或目录路径")
     p_rename.add_argument("new_name", help="新名称（仅名称，不含目录）")
     p_rename.set_defaults(func=cmd_rename)
 
     # 4. scrape
-    p_scrape = subparsers.add_parser("scrape", help="媒体库电影刮削与整理系统")
+    p_scrape = subparsers.add_parser(
+        "scrape",
+        help="媒体库电影刮削与整理系统",
+        description="媒体库电影刮削与自动化整理系统，支持散落文件建目录归集与方案 A / 自定义模板重命名。",
+        epilog="""示例:
+  bdpan scrape foldering /videos/unscraped --dry-run
+  bdpan scrape preview /videos/movies/unwatched -o preview.csv
+  bdpan scrape apply preview.csv --target-dir /videos/movies/unwatched""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     scrape_sub = p_scrape.add_subparsers(dest="scrape_cmd", help="刮削子命令")
 
     # 4.1 scrape preview
-    p_preview = scrape_sub.add_parser("preview", help="扫描并生成方案 A 刮削更名预览")
-    p_preview.add_argument("dir", nargs="?", default="/影视/电影/watched", help="目标目录")
-    p_preview.add_argument("-o", "--output", default="scrape_preview.json", help="输出 json 路径")
+    p_preview = scrape_sub.add_parser(
+        "preview",
+        help="扫描并生成方案 A 刮削更名预览",
+        description="扫描目标目录，匹配 TMDB/IMDb 电影元数据，生成重命名预演对照表（支持 --format 自定义模板）。",
+        epilog="""示例:
+  bdpan scrape preview /videos/movies/unwatched -o preview.csv
+  bdpan scrape preview /videos/movies --format "{title} ({year})"
+  bdpan scrape preview /videos/movies --format "{title} ({year}) {{imdb-{imdb_id}}}" """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_preview.add_argument("dir", nargs="?", default="/影视/电影/watched", help="目标目录 (默认: /影视/电影/watched)")
+    p_preview.add_argument("-o", "--output", default="scrape_preview.json", help="输出 json/csv 路径 (默认: scrape_preview.json)")
     p_preview.add_argument("--all", action="store_true", help="不跳过已合规目录，全量扫描")
-    p_preview.add_argument("--limit", type=int, default=None, help="最大条目限制")
+    p_preview.add_argument("--limit", type=int, default=None, help="最大条目限制 (默认: 不限)")
     p_preview.add_argument(
         "--format",
         default=None,
@@ -951,17 +1022,34 @@ def build_parser() -> argparse.ArgumentParser:
     p_preview.set_defaults(func=cmd_scrape_preview)
 
     # 4.2 scrape apply
-    p_apply = scrape_sub.add_parser("apply", help="安全应用预览结果并执行网盘批量重命名")
-    p_apply.add_argument("preview_file", nargs="?", default="scrape_preview.json", help="预览 json 文件")
+    p_apply = scrape_sub.add_parser(
+        "apply",
+        help="安全应用预览结果并执行网盘批量重命名",
+        description="安全应用预演生成的 CSV/JSON 对照表，批量执行网盘重命名（底层 50 项/批保护）。",
+        epilog="""示例:
+  bdpan scrape apply preview.csv
+  bdpan scrape apply preview.csv --target-dir /videos/movies/unwatched --batch-size 25""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_apply.add_argument("preview_file", nargs="?", default="scrape_preview.json", help="预览 json/csv 文件 (默认: scrape_preview.json)")
     p_apply.add_argument("--target-dir", default=None, help="覆盖校验目录")
     p_apply.add_argument("--batch-size", type=int, default=25, help="单批提交大小 (默认: 25)")
     p_apply.set_defaults(func=cmd_scrape_apply)
 
     # 4.3 scrape foldering
-    p_folder = scrape_sub.add_parser("foldering", help="自动为散落媒体文件创建方案 A 独立规范目录并移入")
-    p_folder.add_argument("dir", nargs="?", default="/影视/电影/unscraped", help="散落文件所在父目录")
+    p_folder = scrape_sub.add_parser(
+        "foldering",
+        help="自动为散落媒体文件创建方案 A 独立规范目录并移入",
+        description="自动扫描散落媒体文件与外挂字幕，依据刮削元数据为其创建独立规范目录并原子移入。",
+        epilog="""示例:
+  bdpan scrape foldering /videos/unscraped --dry-run
+  bdpan scrape foldering /videos/unscraped --format "{title} ({year}) {{imdb-{imdb_id}}}"
+  bdpan scrape foldering /videos/unscraped --batch-size 25""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p_folder.add_argument("dir", nargs="?", default="/影视/电影/unscraped", help="散落文件所在父目录 (默认: /影视/电影/unscraped)")
     p_folder.add_argument("--dry-run", action="store_true", help="仅预演规划，不实际修改网盘")
-    p_folder.add_argument("--batch-size", type=int, default=25, help="单批移动大小")
+    p_folder.add_argument("--batch-size", type=int, default=25, help="单批移动大小 (默认: 25)")
     p_folder.add_argument(
         "--format",
         default=None,
@@ -970,31 +1058,80 @@ def build_parser() -> argparse.ArgumentParser:
     p_folder.set_defaults(func=cmd_scrape_foldering)
 
     # 5. meta (第三阶段预留)
-    p_meta = subparsers.add_parser("meta", help="元数据与海报抓取上传子系统")
+    p_meta = subparsers.add_parser(
+        "meta",
+        help="元数据与海报抓取上传子系统",
+        description="媒体元数据与海报抓取上传子系统（Kodi/Emby/Jellyfin 兼容性支持）。",
+        epilog="""示例:
+  bdpan meta nfo /videos/movies/watched --dry-run
+  bdpan meta poster /videos/movies/watched --dry-run""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     meta_sub = p_meta.add_subparsers(dest="meta_cmd", help="元数据子命令")
 
-    p_nfo = meta_sub.add_parser("nfo", help="批量生成 movie.nfo")
+    p_nfo = meta_sub.add_parser(
+        "nfo",
+        help="批量生成 movie.nfo",
+        description="依据方案 A 目录名末尾的 IMDb/TMDB ID 精准查询电影元数据并生成标准 movie.nfo。",
+        epilog="""示例:
+  bdpan meta nfo /videos/movies/watched --dry-run""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_nfo.add_argument("dir", help="电影目录或父目录")
     p_nfo.add_argument("--dry-run", action="store_true", help="仅预演生成，不上传")
     p_nfo.set_defaults(func=cmd_meta_nfo)
 
-    p_poster = meta_sub.add_parser("poster", help="批量下载并上传 poster.jpg")
+    p_poster = meta_sub.add_parser(
+        "poster",
+        help="批量下载并上传 poster.jpg",
+        description="下载 TMDB 官方最高清竖版海报并流式上传至电影根目录的 poster.jpg。",
+        epilog="""示例:
+  bdpan meta poster /videos/movies/watched --dry-run""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_poster.add_argument("dir", help="电影目录或父目录")
     p_poster.add_argument("--dry-run", action="store_true", help="仅预演抓取，不上传")
     p_poster.set_defaults(func=cmd_meta_poster)
 
     # 6. quota
-    p_quota = subparsers.add_parser("quota", help="查询网盘容量配额")
+    p_quota = subparsers.add_parser(
+        "quota",
+        help="查询网盘容量配额",
+        description="查询当前百度网盘账户的存储空间配额（已用空间、总容量、使用百分比及会员到期时间）。",
+        epilog="""示例:
+  bdpan quota
+  bdpan quota --check-expire --check-free
+  bdpan quota --json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_quota.add_argument("--check-expire", action="store_true", help="同时检查会员容量过期时间")
     p_quota.add_argument("--check-free", action="store_true", help="同时查询免费容量配额")
     p_quota.set_defaults(func=cmd_quota)
 
     # 7. whoami
-    p_whoami = subparsers.add_parser("whoami", help="查询当前网盘账户信息")
+    p_whoami = subparsers.add_parser(
+        "whoami",
+        help="查询当前网盘账户信息",
+        description="查询当前登录网盘账户的基本信息（用户名、百度 UID、VIP 会员等级等）。",
+        epilog="""示例:
+  bdpan whoami
+  bdpan whoami --json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_whoami.set_defaults(func=cmd_whoami)
 
     # 8. search
-    p_search = subparsers.add_parser("search", help="按关键词搜索网盘文件")
+    p_search = subparsers.add_parser(
+        "search",
+        help="按关键词搜索网盘文件",
+        description="按关键词搜索网盘文件，支持限定父目录与非递归单层检索。",
+        epilog="""示例:
+  bdpan search "阿凡达"
+  bdpan search "Matrix" --dir /videos/movies
+  bdpan search "*.mkv" --dir /videos --no-recursion
+  bdpan search "4K" --json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_search.add_argument("key", help="搜索关键词")
     p_search.add_argument("--dir", default=None, help="限定搜索目录 (默认: 全盘)")
     p_search.add_argument("--no-recursion", action="store_true", help="不递归子目录，仅搜当前层")
@@ -1003,7 +1140,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_search.set_defaults(func=cmd_search)
 
     # 9. tree
-    p_tree = subparsers.add_parser("tree", help="递归遍历网盘目录树（客户端逐层遍历，可选落地本地索引）")
+    p_tree = subparsers.add_parser(
+        "tree",
+        help="递归遍历网盘目录树（客户端逐层遍历，可选落地本地索引）",
+        description="客户端深度递归遍历网盘目录树拓扑，可选输出全盘保真 JSON 索引文件。",
+        epilog="""示例:
+  bdpan tree /videos
+  bdpan tree /videos/movies --depth 2
+  bdpan tree /videos --index /tmp/movies_index.json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_tree.add_argument("path", nargs="?", default="/", help="网盘目录路径 (默认: /)")
     p_tree.add_argument("--depth", type=int, default=None, help="最大遍历深度 (默认: 不限)")
     p_tree.add_argument("--index", default=None, metavar="FILE", help="将遍历索引写入本地 JSON 文件")
@@ -1013,6 +1159,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_upload = subparsers.add_parser(
         "upload",
         help="上传本地文件（预上传→分片→创建，支持断点续传）",
+        description="大文件切片上传引擎，具备首片特征预计算极速秒传、动态最优机房请求与本地断点续传能力。",
+        epilog="""示例:
+  bdpan upload ./movie.mkv /videos/movies/
+  bdpan upload ./movie.mkv /videos/movies/new_name.mkv
+  bdpan upload ./movie.mkv /videos/movies/ --overwrite""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_upload.add_argument("local_path", help="本地文件路径")
     p_upload.add_argument(
@@ -1026,6 +1178,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_dedup = subparsers.add_parser(
         "dedup",
         help="扫描并治理网盘冲突副本与重复项 (1)/(2)（支持隔离与删除）",
+        description="扫描并治理网盘冲突副本 (1)、(2) 与无主孤儿重复项，支持暂存隔离与回收站安全清理。",
+        epilog="""示例:
+  bdpan dedup /videos/movies --dry-run
+  bdpan dedup /videos/movies --staging-dir /videos/pending_delete
+  bdpan dedup /videos/movies --delete -y""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_dedup.add_argument("path", nargs="?", default="/", help="待扫描的网盘目录路径 (默认: /)")
     action_grp = p_dedup.add_mutually_exclusive_group()
@@ -1050,6 +1208,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_download = subparsers.add_parser(
         "download",
         help="下载网盘文件至本地（支持断点续传与批量下载）",
+        description="网盘大文件断点续传下载引擎，注入 pan.baidu.com User-Agent 防限速，支持多文件并发批量下载。",
+        epilog="""示例:
+  bdpan download /videos/movies/Inception.mkv
+  bdpan download /videos/movies/f1.mkv /videos/movies/f2.mkv -d ./downloads/
+  bdpan download /videos/movies/Inception.mkv -d ./downloads/ --overwrite""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_download.add_argument("paths", nargs="+", help="网盘文件路径 (支持多个)")
     p_download.add_argument("-d", "--dest", default=".", help="本地保存目标目录或文件路径 (默认: 当前目录)")
@@ -1060,6 +1224,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_dlink = subparsers.add_parser(
         "dlink",
         help="查询网盘文件高速下载直链 (支持导出 aria2c / curl 命令)",
+        description="查询网盘文件的高速下载直链（带防盗链验证），支持直接导出 aria2c 多线程或 curl 脚本。",
+        epilog="""示例:
+  bdpan dlink /videos/movies/Inception.mkv
+  bdpan dlink /videos/movies/Inception.mkv --aria2
+  bdpan dlink /videos/movies/Inception.mkv --curl""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p_dlink.add_argument("paths", nargs="+", help="网盘文件路径 (支持多个)")
     dlink_export_grp = p_dlink.add_mutually_exclusive_group()
@@ -1068,52 +1238,140 @@ def build_parser() -> argparse.ArgumentParser:
     p_dlink.set_defaults(func=cmd_dlink)
 
     # 14. ops
-    p_ops = subparsers.add_parser("ops", help="查看网盘操作审计流水")
+    p_ops = subparsers.add_parser(
+        "ops",
+        help="查看网盘操作审计流水",
+        description="网盘关键变更操作流水审计日志，记录每次批量改名、移动与归集的映射细节。",
+        epilog="""示例:
+  bdpan ops list
+  bdpan ops list --limit 50
+  bdpan ops show 20261029_095105_mv_7ac7a2""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     ops_sub = p_ops.add_subparsers(dest="ops_subcmd", help="流水子命令")
-    p_ops_list = ops_sub.add_parser("list", help="列出历史操作审计流水")
+    p_ops_list = ops_sub.add_parser(
+        "list",
+        help="列出历史操作审计流水",
+        description="列出历史操作审计流水概览（流水号、时间戳、命令类型、影响文件数、执行状态）。",
+        epilog="""示例:
+  bdpan ops list
+  bdpan ops list --limit 50""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_ops_list.add_argument("--limit", type=int, default=20, help="最多显示记录数 (默认: 20)")
     p_ops_list.set_defaults(func=cmd_ops)
 
-    p_ops_show = ops_sub.add_parser("show", help="查看指定操作流水详情与变更清单")
+    p_ops_show = ops_sub.add_parser(
+        "show",
+        help="查看指定操作流水详情与变更清单",
+        description="查看指定操作流水号的详细映射清单与变更前后真实路径对比。",
+        epilog="""示例:
+  bdpan ops show 20261029_095105_mv_7ac7a2""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_ops_show.add_argument("op_id", help="操作流水号")
     p_ops_show.set_defaults(func=cmd_ops)
     p_ops.set_defaults(func=cmd_ops)
 
     # 15. undo
-    p_undo = subparsers.add_parser("undo", help="逆向撤销历史批量操作 (基于操作流水)")
+    p_undo = subparsers.add_parser(
+        "undo",
+        help="逆向撤销历史批量操作 (基于操作流水)",
+        description="依据操作流水号逆向撤销历史批量操作，原子恢复文件或目录的原有路径（支持 --dry-run 预演）。",
+        epilog="""示例:
+  bdpan undo 20261029_095105_mv_7ac7a2 --dry-run
+  bdpan undo 20261029_095105_mv_7ac7a2 -y""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_undo.add_argument("op_id", help="操作流水号")
     p_undo.add_argument("--dry-run", action="store_true", help="仅预演逆向回滚方案，不实际修改网盘")
     p_undo.add_argument("-y", "--yes", action="store_true", help="跳过确认直接执行逆向回滚")
     p_undo.set_defaults(func=cmd_undo)
 
     # 16. auth
-    p_auth = subparsers.add_parser("auth", help="网盘账号认证与多账号管理")
+    p_auth = subparsers.add_parser(
+        "auth",
+        help="网盘账号认证与多账号管理",
+        description="百度网盘多账号认证管理系统，支持多租户凭证隔离存储、活跃账号切换与单独授权。",
+        epilog="""示例:
+  bdpan auth list
+  bdpan auth switch work_pan
+  bdpan auth login --account personal_pan""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     auth_sub = p_auth.add_subparsers(dest="auth_subcmd", help="认证子命令")
-    p_auth_list = auth_sub.add_parser("list", help="列出本地所有网盘账号与到期状态")
+    p_auth_list = auth_sub.add_parser(
+        "list",
+        help="列出本地所有网盘账号与到期状态",
+        description="列出本地保存的所有网盘账号别名、UID 以及 Token 剩余有效期与刷新状态。",
+        epilog="""示例:
+  bdpan auth list""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_auth_list.set_defaults(func=cmd_auth)
 
-    p_auth_switch = auth_sub.add_parser("switch", help="切换当前默认活跃网盘账号")
+    p_auth_switch = auth_sub.add_parser(
+        "switch",
+        help="切换当前默认活跃网盘账号",
+        description="切换当前全局默认活跃网盘账号别名。",
+        epilog="""示例:
+  bdpan auth switch work_pan""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_auth_switch.add_argument("alias", help="账号别名")
     p_auth_switch.set_defaults(func=cmd_auth)
 
-    p_auth_login = auth_sub.add_parser("login", help="登录或重新授权指定网盘账号")
+    p_auth_login = auth_sub.add_parser(
+        "login",
+        help="登录或重新授权指定网盘账号",
+        description="登录或重新授权指定网盘账号别名（支持有头浏览器与无头终端授权）。",
+        epilog="""示例:
+  bdpan auth login
+  bdpan auth login --account work_pan""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_auth_login.add_argument("--account", default=None, help="账号别名 (默认: 当前活跃账号)")
     p_auth_login.set_defaults(func=cmd_auth)
     p_auth.set_defaults(func=cmd_auth)
 
     # 17. info
-    p_info = subparsers.add_parser("info", help="探测视频媒体的深度元数据 (分辨率/时长/编码/音轨)")
+    p_info = subparsers.add_parser(
+        "info",
+        help="探测视频媒体的深度元数据 (分辨率/时长/编码/音轨)",
+        description="无需下载视频本体，直接基于网盘多媒体元数据探测视频精准分辨率(4K/1080P)、时长、HEVC/H.264编码与音轨。",
+        epilog="""示例:
+  bdpan info /videos/movies/Inception.mkv
+  bdpan info /videos/movies/Inception.mkv --json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_info.add_argument("path", help="网盘视频/多媒体文件绝对路径")
     p_info.set_defaults(func=cmd_info)
 
     # 18. stats
-    p_stats = subparsers.add_parser("stats", help="递归聚合统计目录下的容量、文件数与媒体分类分布")
+    p_stats = subparsers.add_parser(
+        "stats",
+        help="递归聚合统计目录下的容量、文件数与媒体分类分布",
+        description="递归聚合统计网盘指定目录下的总容量、总文件数、子目录数及视频/音频/字幕等格式占比分布。",
+        epilog="""示例:
+  bdpan stats /videos/movies
+  bdpan stats /videos/movies --depth 2
+  bdpan stats /videos/movies --json""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_stats.add_argument("path", nargs="?", default="/", help="网盘目录路径 (默认: /)")
-    p_stats.add_argument("--depth", type=int, default=None, help="最大递归深度")
+    p_stats.add_argument("--depth", type=int, default=None, help="最大递归深度 (默认: 不限)")
     p_stats.set_defaults(func=cmd_stats)
 
     # 19. mcp
-    p_mcp = subparsers.add_parser("mcp", help="启动原生 Model Context Protocol (MCP) Server (基于 stdio)")
+    p_mcp = subparsers.add_parser(
+        "mcp",
+        help="启动原生 Model Context Protocol (MCP) Server (基于 stdio)",
+        description="启动原生 Model Context Protocol (MCP) Server（基于标准 stdio），供 AI 助手直接调用 14 项网盘管理工具。",
+        epilog="""示例:
+  bdpan mcp
+  claude mcp add bdpan uv run bdpan mcp""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     p_mcp.set_defaults(func=cmd_mcp)
 
     return parser

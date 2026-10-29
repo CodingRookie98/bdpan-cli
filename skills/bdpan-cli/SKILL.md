@@ -10,14 +10,26 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 
 ---
 
-## 1. 运行环境与执行规范
+## 1. 运行环境、安装指示与执行规范
 
+### 1.1 安装指示与审批红线 (MANDATORY APPROVAL GATE)
+* **先探测后使用**：在使用前检测环境是否存在 `bdpan` 命令（或当前处于项目根目录使用 `uv run bdpan`）。
+* ⛔ **严禁擅自安装**：若宿主系统中未找到 `bdpan` CLI（例如终端返回 `command not found: bdpan` 且当前目录非项目根目录），**绝对严禁智能体擅自、静默在后台执行 `uv tool install`、`pip install` 或下载二进制**！
+* 🛑 **必须获得用户显式审批**：智能体必须立即暂停操作，如实向用户陈述“当前系统未安装 bdpan CLI 工具”，向用户提供安装选项（如 `uv tool install bdpan-cli`、`pip install bdpan-cli` 或使用 `uvx` 即用即走），并在**明确取得用户确认/审批授权后**方可执行安装或引导用户安装。
+* **支持的安装方式**：
+  - 推荐全局隔离安装：`uv tool install bdpan-cli`（更新使用 `uv tool upgrade bdpan-cli`）
+  - 免安装即用即走：`uvx bdpan-cli <subcommand>`
+  - 传统 pip 安装：`pip install bdpan-cli`
+  - 源码开发模式：在项目根目录下执行 `uv sync`，随后通过 `uv run bdpan <subcommand>` 运行
+  - 独立免环境二进制：从 [GitHub Releases](https://github.com/CodingRookie98/bdpan-cli/releases) 下载对应系统的单文件执行包
+
+### 1.2 执行基线与安全规范
 * **执行命令基线**：在项目根目录下通过 `uv run bdpan <subcommand>` 运行（或在全局安装环境下直接使用 `bdpan <subcommand>`）。
 * **全局通用选项**：
   * `--account <alias>`：单次命令指定操作账号别名（支持多租户账号隔离并发操作）。
   * `--json`：所有核心查询命令均支持标准化 JSON 信封输出（`{"success": true, "code": 0, "data": ..., "error": null}`），便于脚本或流水线消费。
 * **认证凭据**：
-  * 应用密钥配置于项目根目录 `.env`（`BAIDUPAN_APP_KEY`, `BAIDUPAN_APP_SECRET`）。
+  * 应用密钥配置于项目根目录 `.env`（`BAIDU_PAN_APP_KEY`, `BAIDU_PAN_SECRET_KEY`）。
   * 授权 Token 自动缓存在 `.baidupan_tokens.json`，由 `TokenManager` 自动管理并在过期前（剩余 < 1天）静默刷新，支持多账号别名存储。
 * **安全底线与审计防线**：
   * **只读先行与预演原则**：对网盘进行批量改名、移动或删除操作前，先通过只读命令（`ls`、`tree`、`scrape preview`、`--dry-run`）核对路径与影响范围。
