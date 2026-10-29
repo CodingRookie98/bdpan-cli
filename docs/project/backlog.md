@@ -4,7 +4,7 @@
 > - **文档版本**: V1.11.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-10-28
-> - **条目规范**: [backlog-specification.md](../../.agents/skills/doc-governance/references/backlog-specification.md)
+> - **条目规范**: `backlog-specification.md`
 > - **演进计划**: [roadmap.md](./roadmap.md) | [2026-10-28 实施计划](./plans/2026-10-28-roadmap-and-open-source-packaging.md)
 
 ## 进行中
