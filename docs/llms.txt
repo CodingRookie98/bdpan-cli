@@ -3,6 +3,10 @@
 > 本文件遵循 llmstxt.org 规范，为 AI 智能体提供全景知识拓扑与物理文件导航地图。
 > 严禁凭空猜测路径，查阅具体模块前请通过下述相对链接精准索引对应文件。
 
+## Tutorials (学习导向 / 新手上手教程)
+
+- [bdpan-cli 用户使用指南 (User Guide)](tutorials/user-guide.md): 安装后即可在终端直接执行 `bdpan` 命令。更新至最新版本：
+
 ## Reference (技术参考 / 机器事实唯一真相源)
 
 - [百度网盘开放平台 SDK 接口参考 (Technical Reference)](reference/api/baidu-pan-sdk.md): SDK 覆盖 6 个 API 类、19 个接口，统一携带固定查询参数 `openapi=xpansdk`；除授权接口外均需以 query 参数传递 `access_token`。

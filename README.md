@@ -4,6 +4,8 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
+[中文](README.md) | [English](README_en.md)
+
 百度网盘工程化 CLI 管理工具。基于[百度网盘开放平台](https://pan.baidu.com/union/doc/)官方 SDK 与协议标准构建，提供文件管理、分片上传续传、冲突副本治理与影视媒体库规范化自动化刮削整理。
 
 ---
