@@ -29,11 +29,9 @@ pip install bdpan-cli
 
 ### 方式 4：跨平台单文件二进制（免 Python 运行时）
 前往 [GitHub Releases](https://github.com/CodingRookie98/bdpan-cli/releases) 直接下载对应平台单文件二进制可执行包，加入 `PATH` 即可运行：
-- `bdpan-linux-amd64`
-- `bdpan-linux-arm64`
-- `bdpan-macos-arm64` (Apple Silicon)
-- `bdpan-macos-x86_64` (Intel)
-- `bdpan-windows-amd64.exe`
+- `bdpan-linux-amd64` (Linux x86_64)
+- `bdpan-macos-arm64` (macOS Apple Silicon)
+- `bdpan-windows-amd64.exe` (Windows x86_64)
 
 ---
 

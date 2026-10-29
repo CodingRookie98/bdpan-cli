@@ -29,11 +29,9 @@ pip install bdpan-cli
 
 ### Method 4: Standalone Binary Releases (Zero Python Runtime Required)
 Download platform-specific standalone single-file binaries directly from [GitHub Releases](https://github.com/CodingRookie98/bdpan-cli/releases), add it to your `PATH`, and run:
-- `bdpan-linux-amd64`
-- `bdpan-linux-arm64`
-- `bdpan-macos-arm64` (Apple Silicon)
-- `bdpan-macos-x86_64` (Intel)
-- `bdpan-windows-amd64.exe`
+- `bdpan-linux-amd64` (Linux x86_64)
+- `bdpan-macos-arm64` (macOS Apple Silicon)
+- `bdpan-windows-amd64.exe` (Windows x86_64)
 
 ---
 

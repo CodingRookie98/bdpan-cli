@@ -50,9 +50,6 @@ jobs:
           - os: macos-14
             target: macos-arm64
             binary_name: bdpan-macos-arm64
-          - os: macos-13
-            target: macos-x86_64
-            binary_name: bdpan-macos-x86_64
           - os: windows-latest
             target: windows-amd64
             binary_name: bdpan-windows-amd64.exe
