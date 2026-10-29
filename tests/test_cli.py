@@ -931,5 +931,40 @@ def test_cli_stats(capsys):
         assert payload["data"]["total_files"] == 2
 
 
+def test_cli_scrape_commands_with_format(capsys):
+    with patch("bdpan_cli.cli.generate_preview") as mock_preview, \
+         patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter, \
+         patch("bdpan_cli.cli.plan_foldering") as mock_plan, \
+         patch("bdpan_cli.cli.execute_foldering") as mock_exec:
+        
+        # 1. 测试 scrape preview 传递 --format
+        exit_code = main(["scrape", "preview", "/movies", "--format", "{title} ({year})", "-o", "preview.csv"])
+        assert exit_code == 0
+        mock_preview.assert_called_once_with(
+            target_dir="/movies",
+            output_file="preview.csv",
+            skip_conforming=True,
+            limit=None,
+            name_format="{title} ({year})",
+        )
+
+        # 2. 测试 scrape foldering 传递 --format 与 --dry-run
+        mock_plan.return_value = [
+            {
+                "target_folder_name": "黑客帝国 (1999)",
+                "target_folder_path": "/movies/黑客帝国 (1999)",
+                "files": [{"filename": "Matrix.mkv", "size": 1024}],
+            }
+        ]
+        exit_code = main(["scrape", "foldering", "/movies", "--format", "{title} ({year})", "--dry-run"])
+        assert exit_code == 0
+        mock_plan.assert_called_once_with("/movies", mock_mgr_getter.return_value, name_format="{title} ({year})")
+        captured = capsys.readouterr()
+        assert "使用自定义模板: {title} ({year})" in captured.out
+        assert "黑客帝国 (1999)" in captured.out
+        mock_exec.assert_not_called()
+
+
+
 
 

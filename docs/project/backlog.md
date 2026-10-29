@@ -28,6 +28,7 @@
 
 ## 已关闭
 
+- [x] BK-0038 电影刮削目录命名自定义模板支持（`scraper.py` 新增 `MovieMetadata.format_name` 与 SafeDict 容错字典映射，支持 `{title}`, `{original_title}`, `{year}`, `{id}`, `{imdb_id}`, `{tmdb_id}`, `{edition}` 占位符自由组合；`preview_scrape.py` 与 `foldering.py` 新增 `name_format` 参数；`cli.py` 在 `scrape preview` 与 `scrape foldering` 增加 `--format` 选项，未指定时默认保持方案 A 行为 100% 向后兼容；单元测试 170→174 全绿，2026-10-29）
 - [x] BK-0037 原生 MCP (Model Context Protocol) Server 集成（新增 `mcp_server.py` 与 `bdpan mcp` 子命令，基于标准 stdio 纯净实现 JSON-RPC 2.0 协议生命周期 initialize/ping/tools/list/tools/call，自省暴露网盘 14 项核心文件管理与可观测性 Tool Schemas，支持 Claude Code、Antigravity、Cursor 直接调用；单测全绿，2026-10-28）
 - [x] BK-0036 全局结构化输出与媒体深度元数据解析（所有核心查询命令支持 `--json` 标准化信封输出；新增 `MediaInfoClient` 模块与 `bdpan info`、`bdpan stats` 命令，支持视频精准分辨率 4K/1080P、时长、HEVC/H.264 编码、音轨探测与目录容量分类聚合统计；单测全绿，2026-10-28）
 - [x] BK-0035 多账号认证管理与动态切换（升级 TokenManager 支持多账号别名存储与自动平滑迁移旧单账号缓存；新增 `bdpan auth list/switch/login` 子命令，CLI 根命令新增全局 `--account <alias>` 参数支持多网盘账号隔离与即时切换；单测验证通过，2026-10-28）
@@ -68,8 +69,8 @@
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V2.1.0 | 2026-10-29 | 电影刮削自定义模板交付：关闭 BK-0038（`format_name` 字段自由组合与容错字典，`scrape preview` / `foldering` 新增 `--format` 参数，默认方案 A 向后兼容），单测 170→174 全绿 |
+| V2.0.0 | 2026-10-28 | Phase 3/4 安全体系与 AI 原生交付：关闭 BK-0034~BK-0037（操作流水审计/逆向撤销、多账号隔离、媒体深度元数据探测/聚合统计、原生 stdio MCP Server），单测 140→170 全绿 |
 | V1.9.0 | 2026-10-28 | Phase 2 传输核心交付：关闭 BK-0032（Downloader 模块、`download` 断点续传与 `dlink` 直链与防限速）与 BK-0033（极速秒传机制与 `locate_upload_host` 动态机房接入），测试 128→140 全绿 |
 | V1.8.0 | 2026-10-28 | Phase 1 开源打包交付：关闭 BK-0029~BK-0031（Vendor SDK 内联化解耦、开源 MIT/Contributing 建设、CI/CD 与多平台 PyInstaller 二进制发布） |
 | V1.7.0 | 2026-10-28 | 演进路线图与开源打包规划：登记 BK-0029~BK-0037，确立四阶段能力演进、全渠道包分发与 Vendor 解耦规划 |
-| V1.6.0 | 2026-10-28 | 刮削器健壮性修复：关闭 BK-0028（解决未带空格 4K/2K 等标签粘连片名缺陷，translations 优先选取 CN 简体中文译名），测试 126→128 全绿 |
-| V1.5.0 | 2026-10-27 | 质量加固与自动化整理增强批次：关闭 BK-0024~BK-0027（刮削器 Welsh 过滤与序号剥除、ls 路径不存在报错与单文件展示、foldering 穿透扫描与字幕识别、dedup 冲突副本治理与 batch_delete），测试 104→126，实测全链路通过 |

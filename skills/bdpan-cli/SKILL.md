@@ -48,8 +48,8 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 | `stats` | 递归聚合统计目录总容量与媒体格式分布 | `uv run bdpan stats /videos/movies [--depth N] [--json]` |
 | `mcp` | 启动原生 Model Context Protocol Server (stdio) | `uv run bdpan mcp` |
 | `dedup` | 冲突副本 `(1)/(2)` 治理与隔离清理 | `uv run bdpan dedup /videos [--staging-dir /videos/pending_delete] [--dry-run]` |
-| `scrape foldering` | 散落媒体文件自动归集方案 A 规范目录 | `uv run bdpan scrape foldering /videos/unscraped [--dry-run]` |
-| `scrape preview` | 电影目录方案 A 刮削更名预览 | `uv run bdpan scrape preview /videos/movies/unwatched` |
+| `scrape foldering` | 散落媒体文件自动归集方案规范目录（支持自定义模板） | `uv run bdpan scrape foldering /videos/unscraped [--format "{title} ({year})"] [--dry-run]` |
+| `scrape preview` | 电影目录方案更名预览（支持自定义模板） | `uv run bdpan scrape preview /videos/movies/unwatched [--format "{title}.{year}.{id}"]` |
 | `scrape apply` | 批量应用刮削重命名映射 | `uv run bdpan scrape apply preview.json --target-dir /videos/movies` |
 | `quota` | 查询网盘总容量、已用空间与到期时间 | `uv run bdpan quota [--check-expire] [--check-free] [--json]` |
 | `whoami` | 查询当前网盘用户名与 VIP 等级 | `uv run bdpan whoami [--json]` |
@@ -88,16 +88,23 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 * 自省暴露 14 个网盘管理与观测工具，支持 Claude Code、Cursor、Antigravity 等主流 AI 编程助手直接编排调用。
 
 ### 3.6 电影刮削与媒体库整理规范 (`scrape`)
-本项目媒体库遵循 **方案 A 规范目录名**：
+本项目媒体库默认遵循 **方案 A 规范目录名**：
 ```text
 {中文译名}.{英文原名}.{上映年份}.{IMDb ID}[.{特别版本标识}]
 例如: 超时空接触.Contact.1997.tt0118884
       白日梦想家.The.Secret.Life.of.Walter.Mitty.2013.tt0359950.Remux-BONZO
 ```
+* **自定义命名模板 (`--format`)**：
+  `preview` 与 `foldering` 命令支持传入 `--format` 自定义目录名占位符组合，未指定时默认保持方案 A 规范：
+  - 可用字段：`{title}`（中文片名）、`{original_title}`（英文原名）、`{year}`（年份）、`{id}` / `{imdb_id}`（IMDb编号）、`{tmdb_id}`（TMDB编号）、`{edition}`（版本标识）。
+  - 示例模板：
+    - Plex 官方规范：`--format "{title} ({year}) {{imdb-{imdb_id}}}"` ➔ `黑客帝国 (1999) {imdb-tt0133093}`
+    - 紧凑点号格式：`--format "{title}.{year}.{id}"` ➔ `黑客帝国.1999.tt0133093`
+    - 常见中文年份：`--format "{title} ({year})"` ➔ `黑客帝国 (1999)`
 * **元数据检索链路**：IMDb ID / 规范特征提取 ➔ TMDB API（zh-CN 优先，en-US 兜底）➔ 豆瓣候选建议补全中文片名。
 * **工作流**：
-  1. **散落文件归集**：使用 `bdpan scrape foldering /path/unscraped` 将视频、外挂字幕与压缩包自动归集入方案 A 规范新建目录中。
-  2. **更名预演**：运行 `bdpan scrape preview <dir> --output preview.json` 生成预演映射表供审阅。
+  1. **散落文件归集**：使用 `bdpan scrape foldering /path/unscraped [--format "..."]` 将视频、外挂字幕与压缩包自动归集入规范新建目录中。
+  2. **更名预演**：运行 `bdpan scrape preview <dir> --output preview.json [--format "..."]` 生成预演映射表供审阅。
   3. **确认应用**：审阅后运行 `bdpan scrape apply preview.json` 执行实际重命名。
 
 ---

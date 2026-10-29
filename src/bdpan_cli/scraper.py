@@ -31,30 +31,73 @@ class MovieMetadata:
     poster_path: str = ""  # TMDB 海报相对路径
     edition: str = ""  # 特别版本标识 (若有)
 
+    def format_name(self, template: str | None = None) -> str:
+        """生成规范目录名。未指定 template 时采用默认方案 A；支持自定义命名模板。"""
+        if not template:
+            def sanitize(text: str) -> str:
+                cleaned = re.sub(r'[\/\\:\*\?"<>\|\s_,]+', ".", text.strip())
+                cleaned = re.sub(r"\.{2,}", ".", cleaned)
+                return cleaned.strip(".")
+
+            zh = sanitize(self.title)
+            en = sanitize(self.original_title)
+            yr = self.year.strip()
+            imdb = self.imdb_id.strip() if self.imdb_id else (f"tmdb{self.tmdb_id}" if self.tmdb_id else "")
+
+            # 如果英文名跟中文名完全一样或全为汉字，则仅保留中文名
+            is_en_pure_chinese = bool(re.fullmatch(r"[\u4e00-\u9fa5·.]+", en))
+            if zh.lower() == en.lower() or not en or is_en_pure_chinese:
+                base = f"{zh}.{yr}.{imdb}".strip(".")
+            else:
+                base = f"{zh}.{en}.{yr}.{imdb}".strip(".")
+
+            if self.edition:
+                base = f"{base}.{sanitize(self.edition)}"
+            return base
+
+        # 自定义模板模式
+        def sanitize_val(text: str) -> str:
+            cleaned = re.sub(r'[\/\\:\*\?"<>\|]+', "", text.strip())
+            return cleaned.strip()
+
+        zh = sanitize_val(self.title)
+        en = sanitize_val(self.original_title)
+        yr = self.year.strip()
+        imdb = self.imdb_id.strip() if self.imdb_id else ""
+        tmdb = str(self.tmdb_id) if self.tmdb_id else ""
+        best_id = imdb if imdb else (f"tmdb{tmdb}" if tmdb else "")
+        edition = sanitize_val(self.edition) if self.edition else ""
+
+        mapping = {
+            "title": zh,
+            "original_title": en,
+            "year": yr,
+            "imdb_id": imdb,
+            "tmdb_id": tmdb,
+            "id": best_id,
+            "edition": edition,
+        }
+
+        class SafeDict(dict):
+            def __missing__(self, key: str) -> str:
+                return "{" + key + "}"
+
+        try:
+            formatted = template.format_map(SafeDict(mapping))
+        except ValueError:
+            # 兼容非标准括号转义
+            formatted = template
+            for k, v in mapping.items():
+                formatted = formatted.replace(f"{{{k}}}", v)
+
+        # 消除连续冗余点号和两端空白
+        cleaned = re.sub(r"\.{2,}", ".", formatted).strip()
+        return cleaned
+
     @property
     def formatted_name(self) -> str:
         """生成方案 A 规范目录名：[中文译名].[英文原名].[上映年份].[IMDb ID]"""
-
-        def sanitize(text: str) -> str:
-            cleaned = re.sub(r'[\/\\:\*\?"<>\|\s_,]+', ".", text.strip())
-            cleaned = re.sub(r"\.{2,}", ".", cleaned)
-            return cleaned.strip(".")
-
-        zh = sanitize(self.title)
-        en = sanitize(self.original_title)
-        yr = self.year.strip()
-        imdb = self.imdb_id.strip() if self.imdb_id else (f"tmdb{self.tmdb_id}" if self.tmdb_id else "")
-
-        # 如果英文名跟中文名完全一样或全为汉字，则仅保留中文名
-        is_en_pure_chinese = bool(re.fullmatch(r"[\u4e00-\u9fa5·.]+", en))
-        if zh.lower() == en.lower() or not en or is_en_pure_chinese:
-            base = f"{zh}.{yr}.{imdb}".strip(".")
-        else:
-            base = f"{zh}.{en}.{yr}.{imdb}".strip(".")
-
-        if self.edition:
-            base = f"{base}.{sanitize(self.edition)}"
-        return base
+        return self.format_name()
 
 
 class MovieScraper:

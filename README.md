@@ -56,7 +56,10 @@ bdpan upload <本地文件> <目标目录|目标目录/新名> [--overwrite]  # 
 bdpan download <网盘文件>... [--dest 本地目录] [--overwrite]  # 大文件断点续传下载
 bdpan dlink <网盘文件>... [--aria2 | --curl]          # 提取高速直链或导出下载脚本
 bdpan dedup /影视/电影 --staging-dir /隔离区      # 治理 (1)/(2) 冲突副本
-bdpan scrape foldering /影视/电影/unscraped       # 媒体库电影散落文件建目录归集
+bdpan scrape foldering /影视/电影/unscraped       # 媒体库电影散落文件建目录归集（默认方案 A，支持 --format 模板）
+bdpan scrape preview /影视/电影/待刮削             # 刮削重命名预演（支持 --format 模板，生成对照表）
+bdpan scrape apply preview.csv                   # 批量应用刮削重命名
+
 
 # 安全运维体系与操作撤销 (Safety & Undo)
 bdpan ops list [--limit 20]               # 查看关键变更操作流水审计日志

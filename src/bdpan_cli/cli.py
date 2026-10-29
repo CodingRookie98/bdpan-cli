@@ -390,12 +390,14 @@ def cmd_scrape_preview(args: argparse.Namespace) -> int:
     target_dir = args.dir
     output_file = args.output
     skip_conforming = not args.all
-    logger.info("启动刮削预演: dir=%s, output=%s, skip_conforming=%s", target_dir, output_file, skip_conforming)
+    name_format = getattr(args, "format", None)
+    logger.info("启动刮削预演: dir=%s, output=%s, format=%s, skip_conforming=%s", target_dir, output_file, name_format, skip_conforming)
     generate_preview(
         target_dir=target_dir,
         output_file=output_file,
         skip_conforming=skip_conforming,
         limit=args.limit,
+        name_format=name_format,
     )
     print(f"\n✅ 刮削预演完成，对照表已生成至: {output_file}\n")
     return 0
@@ -416,14 +418,16 @@ def cmd_scrape_foldering(args: argparse.Namespace) -> int:
     target_dir = args.dir
     dry_run = args.dry_run
     batch_size = args.batch_size
+    name_format = getattr(args, "format", None)
 
-    plan = plan_foldering(target_dir, mgr)
+    plan = plan_foldering(target_dir, mgr, name_format=name_format)
     if not plan:
         print(f"⚠️  在目录 {target_dir} 中未发现任何待整理的媒体文件。")
         return 0
 
     total_files = sum(len(g["files"]) for g in plan)
-    print(f"\n📋 扫描发现 {total_files} 个散落媒体文件，拟归集为 {len(plan)} 个方案 A 规范电影目录：\n")
+    fmt_desc = f"（使用自定义模板: {name_format}）" if name_format else "（方案 A 规范）"
+    print(f"\n📋 扫描发现 {total_files} 个散落媒体文件，拟归集为 {len(plan)} 个电影目录 {fmt_desc}：\n")
     for idx, group in enumerate(plan, 1):
         print(f"[{idx:2d}] 📁 {group['target_folder_name']}")
         for f in group["files"]:
@@ -939,6 +943,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_preview.add_argument("-o", "--output", default="scrape_preview.json", help="输出 json 路径")
     p_preview.add_argument("--all", action="store_true", help="不跳过已合规目录，全量扫描")
     p_preview.add_argument("--limit", type=int, default=None, help="最大条目限制")
+    p_preview.add_argument(
+        "--format",
+        default=None,
+        help="自定义目录命名模板，支持 {title}, {original_title}, {year}, {id}, {imdb_id}, {tmdb_id}, {edition} (默认方案 A)",
+    )
     p_preview.set_defaults(func=cmd_scrape_preview)
 
     # 4.2 scrape apply
@@ -953,6 +962,11 @@ def build_parser() -> argparse.ArgumentParser:
     p_folder.add_argument("dir", nargs="?", default="/影视/电影/unscraped", help="散落文件所在父目录")
     p_folder.add_argument("--dry-run", action="store_true", help="仅预演规划，不实际修改网盘")
     p_folder.add_argument("--batch-size", type=int, default=25, help="单批移动大小")
+    p_folder.add_argument(
+        "--format",
+        default=None,
+        help="自定义目录命名模板，支持 {title}, {original_title}, {year}, {id}, {imdb_id}, {tmdb_id}, {edition} (默认方案 A)",
+    )
     p_folder.set_defaults(func=cmd_scrape_foldering)
 
     # 5. meta (第三阶段预留)

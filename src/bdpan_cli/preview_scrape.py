@@ -58,6 +58,7 @@ def generate_preview(
     output_file: str = "watched_scrape_preview.json",
     skip_conforming: bool = True,
     limit: int | None = None,
+    name_format: str | None = None,
 ) -> list[dict[str, Any]]:
     config = load_config()
     token = TokenManager(config).get_access_token()
@@ -69,10 +70,11 @@ def generate_preview(
         entries = entries[:limit]
 
     logger.info(
-        "=== 正在为 %s 目录下 %d 部电影生成方案 A 预演表 (跳过规范项: %s) ===",
+        "=== 正在为 %s 目录下 %d 部电影生成预演表 (模板: %s, 跳过规范项: %s) ===",
         target_dir,
         len(entries),
-        skip_conforming,
+        name_format or "方案 A (默认)",
+        skip_conforming and not name_format,
     )
 
     mapping: list[dict[str, Any]] = []
@@ -85,8 +87,8 @@ def generate_preview(
         if not raw_name:
             continue
 
-        # 检查是否已符合规范
-        if skip_conforming and is_already_conforming(raw_name):
+        # 检查是否已符合规范（未指定自定义模板时才生效）
+        if not name_format and skip_conforming and is_already_conforming(raw_name):
             skipped_count += 1
             tt_match = re.search(r"\b(tt\d{7,8}|tmdb\d+)\b", raw_name, re.I)
             record = {
@@ -108,7 +110,7 @@ def generate_preview(
         edition = detect_edition(raw_name)
         meta = scraper.scrape_folder_name(raw_name, edition_hint=edition)
         if meta:
-            target_name = meta.formatted_name
+            target_name = meta.format_name(name_format)
             tmdb_id = meta.tmdb_id
             mtype = meta.media_type
             imdb = meta.imdb_id

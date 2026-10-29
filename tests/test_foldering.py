@@ -88,3 +88,34 @@ def test_plan_foldering_with_nested_subdirectories():
     assert "Toy.Story.1995.2160p.mkv" in fnames
     assert "Toy.Story.srt" in fnames
 
+
+def test_plan_foldering_custom_format():
+    mock_mgr = MagicMock()
+    mock_mgr.list_dir.side_effect = lambda path: [
+        {"server_filename": "The.Matrix.1999.1080p.mkv", "isdir": 0, "size": 1000},
+    ] if path == "/test" else []
+
+    mock_scraper = MagicMock()
+    mock_scraper.scrape_folder_name.return_value = MovieMetadata(
+        title="黑客帝国",
+        original_title="The Matrix",
+        year="1999",
+        imdb_id="tt0133093",
+    )
+
+    # 1. 自定义括号年份模板
+    plan_bracket = plan_foldering("/test", mock_mgr, mock_scraper, name_format="{title} ({year})")
+    assert len(plan_bracket) == 1
+    assert plan_bracket[0]["target_folder_name"] == "黑客帝国 (1999)"
+
+    # 2. 自定义点号模板
+    plan_dot = plan_foldering("/test", mock_mgr, mock_scraper, name_format="{title}.{year}.{id}")
+    assert len(plan_dot) == 1
+    assert plan_dot[0]["target_folder_name"] == "黑客帝国.1999.tt0133093"
+
+    # 3. Plex 规范模板
+    plan_plex = plan_foldering("/test", mock_mgr, mock_scraper, name_format="{title} ({year}) {{imdb-{imdb_id}}}")
+    assert len(plan_plex) == 1
+    assert plan_plex[0]["target_folder_name"] == "黑客帝国 (1999) {imdb-tt0133093}"
+
+

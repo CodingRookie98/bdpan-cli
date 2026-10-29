@@ -251,4 +251,39 @@ def test_extract_detail_meta_prioritizes_cn_over_other_chinese_regions(mock_http
     assert meta.formatted_name == "电锯惊魂9：漩涡.Spiral.From.the.Book.of.Saw.2021.tt10342730"
 
 
+def test_movie_metadata_custom_format_plex():
+    meta = MovieMetadata(
+        title="盗梦空间",
+        original_title="Inception",
+        year="2010",
+        imdb_id="tt1375666",
+        tmdb_id=27205,
+    )
+    # 测试 Plex 官方推荐格式: Title (Year) {imdb-ttXXXXXXX}
+    name = meta.format_name("{title} ({year}) {{imdb-{imdb_id}}}")
+    assert name == "盗梦空间 (2010) {imdb-tt1375666}"
+
+    # 测试标准点号但省略外文名: {title}.{year}.{id}
+    name2 = meta.format_name("{title}.{year}.{id}")
+    assert name2 == "盗梦空间.2010.tt1375666"
+
+    # 测试仅有外文名与年份
+    name3 = meta.format_name("{original_title} ({year})")
+    assert name3 == "Inception (2010)"
+
+
+def test_movie_metadata_custom_format_with_edition():
+    meta = MovieMetadata(
+        title="指环王1：护戒使者",
+        original_title="The Lord of the Rings: The Fellowship of the Ring",
+        year="2001",
+        imdb_id="tt0120737",
+        edition="Extended.Remux",
+    )
+    # 自定义格式中包含 {edition}
+    name = meta.format_name("{title}.{year}.{id}.{edition}")
+    assert name == "指环王1：护戒使者.2001.tt0120737.Extended.Remux"
+
+
+
 

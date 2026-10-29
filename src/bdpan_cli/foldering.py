@@ -40,10 +40,12 @@ def plan_foldering(
     dir_path: str,
     mgr: FileManager,
     scraper: MovieScraper | None = None,
+    name_format: str | None = None,
 ) -> list[dict[str, Any]]:
     """扫描目标目录下散落的音视频、字幕与非规范子目录，生成方案 A 规范目录归集计划。
 
     返回列表中的每一项表示一个待创建的独立电影目录及归入其中的文件清单。
+    支持自定义命名模板 name_format。
     """
     if scraper is None:
         scraper = MovieScraper()
@@ -56,8 +58,8 @@ def plan_foldering(
     for item in entries:
         if item.get("isdir") == 1:
             subdir_name = item.get("server_filename", "")
-            # 若子目录已经严格符合方案 A 规范，跳过不处理
-            if is_already_conforming(subdir_name):
+            # 若子目录已经严格符合方案 A 规范，跳过不处理（未指定自定义模板时）
+            if not name_format and is_already_conforming(subdir_name):
                 continue
             # 否则扫描非规范子目录内部的媒体文件与字幕
             sub_path = item.get("path", f"{dir_path}/{subdir_name}")
@@ -112,10 +114,11 @@ def plan_foldering(
 
         meta = scraper.scrape_folder_name(query)
         if meta and meta.formatted_name:
-            target_name = meta.formatted_name
-            # 净化中英文标点与逗号
-            target_name = re.sub(r"[\/\\:\*\?\"<>\|\s_,]+", ".", target_name.strip())
-            target_name = re.sub(r"\.{2,}", ".", target_name).strip(".")
+            target_name = meta.format_name(name_format)
+            if not name_format:
+                # 方案 A 默认：净化中英文标点与逗号
+                target_name = re.sub(r"[\/\\:\*\?\"<>\|\s_,]+", ".", target_name.strip())
+                target_name = re.sub(r"\.{2,}", ".", target_name).strip(".")
             if is_trailer and not target_name.endswith(".Trailer"):
                 target_name = f"{target_name}.Trailer"
         else:

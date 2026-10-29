@@ -4,6 +4,10 @@
 
 ## 2026-10-29
 
+- **feat(scraper)**: 电影刮削目录命名自定义模板支持（BK-0038）。
+  - **BK-0038 (命名模板自由组合与容错)**: `scraper.py` 新增 `MovieMetadata.format_name(template)` 方法，引入 `SafeDict` 容错字典，支持 `{title}`, `{original_title}`, `{year}`, `{id}`, `{imdb_id}`, `{tmdb_id}`, `{edition}` 等占位符自由组合；`formatted_name` 保持无参默认方案 A 命名；
+  - **CLI 参数支持**: `preview_scrape.py` 与 `foldering.py` 分别扩充 `name_format` 传参；`cli.py` 在 `scrape preview` 与 `scrape foldering` 注册 `--format` 参数，支持 Plex 官方模板、点号紧凑模板与自定义中英文格式；未指定时默认保持方案 A 规范不变，100% 向后兼容；
+  - 全量测试套件从 170 项扩充至 174 项全绿通过（`174 passed in 7.06s`）。
 - **docs(skill)**: 全面同步升级 `skills/bdpan-cli/SKILL.md` 智能体专属技能手册。
   - 架构描述更正为标准内聚包（`src/bdpan_cli/_vendor/openapi_client`）；
   - 全量补充 Phase 1~4 交付的所有新命令速查（`download`, `dlink`, `ops`, `undo`, `auth`, `info`, `stats`, `mcp` 以及全局 `--account` 和 `--json`）；
