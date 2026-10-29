@@ -1,6 +1,6 @@
 [project]
 name = "bdpan-cli"
-version = "0.2.0"
+version = "0.3.0"
 description = "百度网盘工程化 CLI 管理工具"
 readme = "README.md"
 license = { text = "MIT" }

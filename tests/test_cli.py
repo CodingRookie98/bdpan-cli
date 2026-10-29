@@ -1005,8 +1005,8 @@ def test_cli_version_flags(capsys):
     import bdpan_cli
     from bdpan_cli._version import __version__
 
-    assert bdpan_cli.__version__ == "0.2.0"
-    assert __version__ == "0.2.0"
+    assert bdpan_cli.__version__ == "0.3.0"
+    assert __version__ == "0.3.0"
 
     # 测试 --version 触发 SystemExit 0 并打印版本号
     with pytest.raises(SystemExit) as exc_info:

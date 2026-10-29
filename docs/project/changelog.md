@@ -2,7 +2,7 @@
 
 > 记录每次交付的功能与文档演进。格式：日期 + 版本 + 变更摘要。
 
-## [0.2.0] - 2026-10-29
+## [0.3.0] - 2026-10-29
 
 - **feat(sdk)**: 提供 Python SDK 高层门面类 `BaiduPan`（BK-0045）。
   - **BK-0045 (Python SDK 门面类与开箱即用 API)**:
@@ -10,6 +10,8 @@
     - **灵活初始化机制**: 支持零配置自动初始化（按优先级自动检索环境变量 ➔ 当前目录 `.env` ➔ XDG 全局配置 `~/.config/bdpan/.env`），亦支持显式传入 `app_key` / `secret_key`、`account` 别名或 `access_token`；
     - **模块顶层导出**: 在 `src/bdpan_cli/__init__.py` 中导出 `BaiduPan` 门面及 `FileManagerError`、`UploadError`、`DownloadError`、`AccountError` 等核心异常契约；
     - **测试与文档覆盖**: 新增 `tests/test_client.py`（8 项单元测试），全量回归测试套件达 203 项全绿通过；在中英文 `README`、`docs/tutorials/user-guide.md` 与 `skills/bdpan-cli/SKILL.md` 中同步增补 Python SDK 快速上手教程。
+
+## [0.2.0] - 2026-10-29
 
 - **feat(auth)**: 纯净 BYOK 认证配置、XDG 全局配置链条与优雅登录体验（BK-0043）。
   - **BK-0043 (BYOK 凭证配置与一键浏览器登录)**:
