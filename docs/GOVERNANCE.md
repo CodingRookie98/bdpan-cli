@@ -25,9 +25,9 @@
 ## 门禁（提交前必须通过）
 
 ```bash
-python3 .agents/skills/doc-governance/scripts/check-doc-links.py --root docs   # 零断链
-python3 .agents/skills/doc-governance/scripts/trim-revision.py --root docs --fix --keep 5
-python3 .agents/skills/doc-governance/scripts/generate-llms-txt.py --root docs --output docs/llms.txt
+python3 scripts/check-doc-links.py --root docs   # 零断链
+python3 scripts/trim-revision.py --root docs --fix --keep 5
+python3 scripts/generate-llms-txt.py --root docs --output docs/llms.txt
 ```
 
 ## 写作规范

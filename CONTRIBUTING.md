@@ -55,9 +55,9 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
 ### 3.3 文档门禁审计 (Docs-as-Code)
 涉及文档变动时，必须运行文档自动化门禁脚本：
 ```bash
-python3 .agents/skills/doc-governance/scripts/check-doc-links.py --root docs
-python3 .agents/skills/doc-governance/scripts/trim-revision.py --root docs --fix --keep 5
-python3 .agents/skills/doc-governance/scripts/generate-llms-txt.py --root docs --output docs/llms.txt
+python3 scripts/check-doc-links.py --root docs
+python3 scripts/trim-revision.py --root docs --fix --keep 5
+python3 scripts/generate-llms-txt.py --root docs --output docs/llms.txt
 ```
 
 ---

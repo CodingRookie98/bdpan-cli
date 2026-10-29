@@ -70,8 +70,8 @@
   - 涉及命令、参数或 SDK 适配变更时，必须同步更新 `README.md`、`docs/project/changelog.md`、`skills/bdpan-cli/SKILL.md` 等对应文档；
   - 提交前运行文档门禁脚本验证（零断链、健康度合格）：
     ```bash
-    python3 .agents/skills/doc-governance/scripts/check-doc-links.py --root docs
-    python3 .agents/skills/doc-governance/scripts/generate-llms-txt.py --root docs --output docs/llms.txt
+    python3 scripts/check-doc-links.py --root docs
+    python3 scripts/generate-llms-txt.py --root docs --output docs/llms.txt
     ```
 - **原子提交规范**：
   - 遵循 Conventional Commits 标准（`feat(cli): ...`, `fix(scraper): ...`, `docs: ...`）；

@@ -43,8 +43,8 @@ jobs:
 
       - name: Doc links verification
         run: |
-          python3 .agents/skills/doc-governance/scripts/check-doc-links.py --root docs
-          python3 .agents/skills/doc-governance/scripts/generate-llms-txt.py --root docs --output docs/llms.txt
+          python3 scripts/check-doc-links.py --root docs
+          python3 scripts/generate-llms-txt.py --root docs --output docs/llms.txt
 
       - name: Verify build artifact
         run: uv build
