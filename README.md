@@ -77,6 +77,7 @@ bdpan --account <alias> <subcommand>      # 临时以指定账号执行单次命
 # 媒体可观测性与全局选项 (Media Insights & Global Options)
 bdpan info /影视/电影/Inception.mkv        # 探测视频精准分辨率(4K/1080P)、时长、HEVC编码与音轨
 bdpan stats /影视/电影 [--depth N]        # 递归聚合统计目录总容量、总文件数及媒体格式分类占比
+bdpan -V / --version                      # 查看当前 CLI 工具版本号
 bdpan --json <subcommand>                 # 所有核心查询命令支持标准化 JSON 信封输出（脚本化集成）
 bdpan --debug <subcommand>                # 开启详细诊断调试日志（输出至 stderr，双写至 ~/.config/bdpan/logs/）
 bdpan -q <subcommand>                     # 静音非错误输出（仅保留 ERROR）
@@ -129,7 +130,7 @@ cp .env.example .env
 ├── pyproject.toml            # 标准 Python 项目配置与 CLI 命令行入口
 ├── src/bdpan_cli/            # 核心业务代码与 CLI 子命令
 │   └── _vendor/              # 内聚内嵌的 OpenAPI Client 依赖包（标准轮子直接打包）
-├── tests/                    # 单元测试与回归套件 (170+ 项全绿)
+├── tests/                    # 单元测试与回归套件 (180+ 项全绿)
 └── .python-version           # 3.12
 ```
 

@@ -40,6 +40,13 @@ pip install bdpan-cli
 - macOS Intel: `bdpan-macos-x86_64`
 - Windows: `bdpan-windows-amd64.exe`
 
+#### 验证安装
+安装完成后，可通过以下命令验证 CLI 工具是否就绪：
+```bash
+bdpan --version
+# 输出: bdpan 0.1.0
+```
+
 ---
 
 ## 2. 百度开放平台配置与账号授权

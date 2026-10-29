@@ -76,6 +76,13 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 | `quota` | 查询网盘总容量、已用空间与到期时间 | `uv run bdpan quota [--check-expire] [--check-free] [--json]` |
 | `whoami` | 查询当前网盘用户名与 VIP 等级 | `uv run bdpan whoami [--json]` |
 
+* **全局通用选项**：
+  * `-V`, `--version`：查看 CLI 工具当前版本号（如 `bdpan 0.1.0`）。
+  * `--account <alias>`：指定当前命令所操作的网盘账号租户。
+  * `--json`：以标准化 JSON 信封格式输出结果（结构化自动化消费）。
+  * `-v`, `--verbose`, `--debug`：开启详细诊断调试日志（输出至 stderr，自动双写至 `~/.config/bdpan/logs/`）。
+  * `-q`, `--quiet`：静音模式，仅保留 ERROR 级别输出。
+
 ---
 
 ## 3. 核心子系统与关键语义

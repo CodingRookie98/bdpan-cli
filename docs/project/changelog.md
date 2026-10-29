@@ -4,6 +4,13 @@
 
 ## 2026-10-29
 
+- **feat(cli)**: 引入 `_version.py` 版本单一真相源与 CLI `-V`/`--version` 版本自省支持，正式发布 v0.1.0 开源首发版（BK-0042）。
+  - **BK-0042 (首个开源版本 v0.1.0 与版本自省支持)**:
+    - **版本单一真相源**: 新增 `src/bdpan_cli/_version.py` 定义 `__version__ = "0.1.0"`，在 `src/bdpan_cli/__init__.py` 中统一对外暴露 `__version__`；
+    - **CLI 版本号参数**: `src/bdpan_cli/cli.py` 根解析器支持 `-V` 与 `--version` 标准自省参数，执行一键输出 `bdpan 0.1.0`（Exit Code 0）；
+    - **文档与测试治理**: 在 `tests/test_cli.py` 补充版本号及参数校验测试用例，全量 183 项单元测试全绿通过；同步更新 `README.md`、`README_en.md`、`docs/tutorials/user-guide.md` 以及 `skills/bdpan-cli/SKILL.md`；
+    - **发布交付**: 正式创建并推送 Git Tag `v0.1.0` 至 GitHub 远端仓库，触发自动化 Releases 流水线构建跨平台独立二进制执行包。
+
 - **feat(auth/logger)**: 日志治理方案 A 落地与 Token 凭证存储迁移至 XDG 规范 `~/.config/bdpan/tokens.json`（BK-0041）。
   - **BK-0041 (日志治理方案 A 与安全凭证存储)**:
     - **Token 存储与无缝迁移**: 凭证持久化重构为 XDG 规范，默认保存至 `~/.config/bdpan/tokens.json`，并强制施加 `0o600` 严格文件访问权限；`TokenManager` 增加向后兼容与自动平滑迁移能力，若检测到旧项目根目录 `.baidupan_tokens.json` 自动导入新路径；新增 `BDPAN_TOKEN_PATH` 环境变量支持自定义凭据路径；

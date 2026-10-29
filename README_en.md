@@ -80,6 +80,7 @@ bdpan --account <alias> <subcommand>         # Run command under a specific acco
 # Media Observability & Global Options
 bdpan info /videos/movies/Inception.mkv       # Probe 4K/1080P resolution, duration, HEVC codec & audio tracks
 bdpan stats /videos/movies [--depth N]       # Recursive storage breakdown and media category stats
+bdpan -V / --version                         # Display CLI version
 bdpan --json <subcommand>                    # Machine-readable standardized JSON envelope for scripting
 bdpan --debug <subcommand>                   # Detailed diagnostic debug logs (stderr & ~/.config/bdpan/logs/)
 bdpan -q <subcommand>                        # Quiet mode (only ERROR level)
@@ -140,7 +141,7 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
 ├── pyproject.toml            # Python package metadata and CLI entrypoints
 ├── src/bdpan_cli/            # Core CLI source code and commands
 │   └── _vendor/              # Vendored self-contained OpenAPI Client SDK
-├── tests/                    # Unit and regression test suite (170+ tests passing)
+├── tests/                    # Unit and regression test suite (180+ tests passing)
 └── .python-version           # 3.12
 ```
 

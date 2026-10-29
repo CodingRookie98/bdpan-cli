@@ -24,6 +24,7 @@ from bdpan_cli.preview_scrape import generate_preview
 from bdpan_cli.uploader import Uploader
 from bdpan_cli.apply_scrape_rename import apply_renames
 from bdpan_cli.logger import setup_logging, get_logger
+from bdpan_cli._version import __version__
 
 logger = get_logger("bdpan_cli.cli")
 
@@ -894,6 +895,13 @@ def build_parser() -> argparse.ArgumentParser:
   作者信息: CodingRookie98 <520whjoker@gmail.com>
   用户指南: docs/tutorials/user-guide.md""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "-V",
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="显示工具版本号并退出",
     )
     parser.add_argument(
         "--account",

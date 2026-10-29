@@ -1000,6 +1000,29 @@ def test_cli_debug_and_quiet_flags(tmp_path, monkeypatch):
         assert exit_code == 0
 
 
+def test_cli_version_flags(capsys):
+    import bdpan_cli
+    from bdpan_cli._version import __version__
+
+    assert bdpan_cli.__version__ == "0.1.0"
+    assert __version__ == "0.1.0"
+
+    # 测试 --version 触发 SystemExit 0 并打印版本号
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--version"])
+    assert exc_info.value.code == 0
+    captured = capsys.readouterr()
+    assert "bdpan 0.1.0" in captured.out or "bdpan 0.1.0" in captured.err
+
+    # 测试 -V
+    with pytest.raises(SystemExit) as exc_info:
+        main(["-V"])
+    assert exc_info.value.code == 0
+    captured = capsys.readouterr()
+    assert "bdpan 0.1.0" in captured.out or "bdpan 0.1.0" in captured.err
+
+
+
 
 
 

@@ -28,6 +28,7 @@
 
 ## 已关闭
 
+- [x] BK-0042 CLI 版本自省支持与首个正式开源版本 v0.1.0 发布交付（在 `src/bdpan_cli/_version.py` 确立版本单一真相源 `__version__ = "0.1.0"`，在 `cli.py` 根解析器支持 `-V`/`--version` 参数与测试用例，全量 183 项单测全绿；发布 Git Tag `v0.1.0` 触发 GitHub Releases 跨平台自动化构建流水线，2026-10-29）
 - [x] BK-0041 日志系统工程化治理（方案 A）与凭据存储标准 XDG 化（新增 `src/bdpan_cli/logger.py`，支持全局 `--debug` / `-v` 与 `--quiet` / `-q`，控制台日志流输出至 stderr 保证 stdout / `--json` 纯净，自动双写至 `~/.config/bdpan/logs/bdpan.log` 滚动文件；TokenManager 默认存储路径标准 XDG 化至 `~/.config/bdpan/tokens.json` 且安全权限 0o600，自动平滑兼容迁移旧版项目级 `.baidupan_tokens.json`；单测 175→182 全绿，2026-10-29）
 - [x] BK-0040 顶层帮助打印开源仓库与作者信息、确立远端 Issue 反馈指引与代码库正式开源上云（创建并推送远端公共仓库 `origin` 至 `https://github.com/CodingRookie98/bdpan-cli`；`cli.py` 顶层 `--help` 头部描述与底部 `epilog` 输出开源地址与作者信息；`skills/bdpan-cli/SKILL.md` 与 `AGENTS.md` 增加缺陷主动提醒远端提 Issue 规约；单测 175 项全绿，2026-10-29）
 - [x] BK-0039 CLI 全局 --help 体验与示例完善及 Skill 安装审批治理（`cli.py` 为全量 32 个一级与二级子命令全面配备规范的 `description` 功能定位概述、底部 `epilog` 实操高频调用样例与显式默认值标注；`skills/bdpan-cli/SKILL.md` 增加安装指南，并确立系统缺失 CLI 时必须向用户明确申请安装审批方可安装的强制军规；单测 174→175 全绿，2026-10-29）
