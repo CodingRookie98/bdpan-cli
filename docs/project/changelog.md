@@ -2,6 +2,17 @@
 
 > 记录每次交付的功能与文档演进。格式：日期 + 版本 + 变更摘要。
 
+## 2026-10-29
+
+- **docs(skill)**: 全面同步升级 `skills/bdpan-cli/SKILL.md` 智能体专属技能手册。
+  - 架构描述更正为标准内聚包（`src/bdpan_cli/_vendor/openapi_client`）；
+  - 全量补充 Phase 1~4 交付的所有新命令速查（`download`, `dlink`, `ops`, `undo`, `auth`, `info`, `stats`, `mcp` 以及全局 `--account` 和 `--json`）；
+  - 扩充 6 类高频工作流范例（直链提取与多线程脚本导出、操作流水审计与逆向回滚还原、多账号隔离操作、视频深度元数据探测、AI 助手接入原生 MCP Server 等）。
+- **chore(python)**: 拓展 Python 3.14 兼容性认证。
+  - `pyproject.toml` 新增 `Programming Language :: Python :: 3.14` 分类器；
+  - `.github/workflows/ci.yml` 自动化测试矩阵扩充覆盖 Python 3.12、3.13、3.14；
+  - 维持 `requires-python = ">=3.12"` 工业界向下兼容基线，保障存量系统与最新环境兼具 100% 可用性。
+
 ## 2026-10-28
 
 - **feat(insights-ai)**: Phase 4 媒体可观测性与 AI 原生集成交付（BK-0036~BK-0037）。

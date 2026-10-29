@@ -1,25 +1,28 @@
 ---
 name: bdpan-cli
-description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan-cli, running CLI commands (ls, mkdir, mv, cp, rm, rename, search, tree, upload), querying account info and quotas (whoami, quota), or organizing and scraping movie media libraries with Scheme A standards.
+description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan-cli, running CLI commands (ls, mkdir, mv, cp, rm, rename, search, tree, upload, download, dlink, ops, undo, auth, info, stats, mcp), querying account info and quotas (whoami, quota), executing reverse undo rollbacks, probing video metadata, or organizing and scraping movie media libraries with Scheme A standards.
 ---
 
 # bdpan-cli 技能手册 (Baidu Pan CLI Operations & Media Management)
 
-`bdpan-cli` 是基于百度网盘开放平台官方 Python SDK (`vendor/baidu-pan-sdk`) 开发的工程化网盘管理与媒体库整理工具。
-本技能指导智能体如何高效、安全地使用 `bdpan` CLI 进行网盘文件交互、断点续传上传、目录树检索以及媒体库影视规范化刮削。
+`bdpan-cli` 是基于百度网盘开放平台官方 OpenAPI 构建的生产级工程化网盘管理工具、影视媒体库整理系统及原生 MCP (Model Context Protocol) 服务的实现。
+本技能指导智能体如何高效、安全地使用 `bdpan` CLI 进行网盘文件交互、断点续传上传/下载、秒传穿透、操作流水审计与逆向回滚、媒体深度元数据探测，以及对接 AI 智能体编排。
 
 ---
 
 ## 1. 运行环境与执行规范
 
-* **执行命令基线**：在项目根目录下通过 `uv run bdpan <subcommand>` 运行（或在激活的 `.venv` 下直接使用 `bdpan <subcommand>`）。
-* **别名兼容**：`bdpan`、`bdpan-cli`、`bd-net-disc-mgr` 三者为等价 CLI 入口。
+* **执行命令基线**：在项目根目录下通过 `uv run bdpan <subcommand>` 运行（或在全局安装环境下直接使用 `bdpan <subcommand>`）。
+* **全局通用选项**：
+  * `--account <alias>`：单次命令指定操作账号别名（支持多租户账号隔离并发操作）。
+  * `--json`：所有核心查询命令均支持标准化 JSON 信封输出（`{"success": true, "code": 0, "data": ..., "error": null}`），便于脚本或流水线消费。
 * **认证凭据**：
   * 应用密钥配置于项目根目录 `.env`（`BAIDUPAN_APP_KEY`, `BAIDUPAN_APP_SECRET`）。
-  * 授权 Token 自动缓存在 `.baidupan_tokens.json`，由 `TokenManager` 自动管理并在过期时静默刷新。
-* **安全底线**：
-  * 对网盘文件进行批量改名、移动或删除操作前，先通过只读命令（`ls`、`tree`、`scrape preview`、`--dry-run`）核对路径与影响范围。
-  * `rm` 默认具有交互确认；脚本或批处理中如需静默执行需显式传递 `-y`。
+  * 授权 Token 自动缓存在 `.baidupan_tokens.json`，由 `TokenManager` 自动管理并在过期前（剩余 < 1天）静默刷新，支持多账号别名存储。
+* **安全底线与审计防线**：
+  * **只读先行与预演原则**：对网盘进行批量改名、移动或删除操作前，先通过只读命令（`ls`、`tree`、`scrape preview`、`--dry-run`）核对路径与影响范围。
+  * **操作流水与逆向撤销**：所有关键重命名、移动、归集操作均自动原子落盘审计日志至 `.bdpan_ops/<op_id>.json`，支持通过 `bdpan undo <op_id>` 一键逆向回滚还原。
+  * **删除确认守卫**：`rm` 默认具有交互确认；批处理中如需跳过确认需显式传递 `-y`；删除操作由网盘服务端移入回收站。
 
 ---
 
@@ -27,25 +30,33 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 
 | 子命令 | 用途说明 | 核心参数与示例 |
 |---|---|---|
-| `ls` | 查看指定目录内容 | `uv run bdpan ls /videos/movies [--limit 1000]` |
+| `ls` | 查看指定目录内容与条目详情 | `uv run bdpan ls /videos/movies [--limit 1000] [--json]` |
 | `mkdir` | 创建新目录（幂等） | `uv run bdpan mkdir /videos/new_dir` |
-| `mv` | 移动或移动改名 | `uv run bdpan mv /path/a /path/b /dest/` (多源)<br>`uv run bdpan mv /path/old /dest/new_name` (单源改名) |
-| `cp` | 复制或复制改名 | `uv run bdpan cp /path/file.mkv /backup/` (每批 50 项) |
-| `rename` | 原地重命名文件或目录 | `uv run bdpan rename /videos/movies new_movies` |
-| `rm` | 删除文件或目录（移入回收站） | `uv run bdpan rm /videos/junk.mkv [-y]` |
-| `search` | 全盘或指定目录搜索 | `uv run bdpan search "阿凡达" [--dir /videos] [--no-recursion]` |
-| `tree` | 递归目录树与本地索引 | `uv run bdpan tree /videos [--depth 2] [--index index.json]` |
-| `upload` | 分片上传与断点续传 | `uv run bdpan upload ./local.mkv /videos/ [--overwrite]` |
-| `quota` | 查询网盘容量与到期日 | `uv run bdpan quota [--check-expire] [--check-free]` |
-| `whoami` | 查询网盘用户信息与 VIP 状态 | `uv run bdpan whoami` |
+| `mv` | 移动或移动改名（自动落盘操作流水） | `uv run bdpan mv /path/a /path/b /dest/` (多源)<br>`uv run bdpan mv /path/old /dest/new_name` (单源改名) |
+| `cp` | 复制或复制改名 | `uv run bdpan cp /path/file.mkv /backup/` (每批 50 项保护) |
+| `rename` | 原地重命名文件或目录（自动落盘操作流水） | `uv run bdpan rename /videos/movies new_movies` |
+| `rm` | 删除文件或目录（移入网盘回收站） | `uv run bdpan rm /videos/junk.mkv [-y]` |
+| `search` | 全盘或指定目录递归搜索 | `uv run bdpan search "阿凡达" [--dir /videos] [--no-recursion] [--json]` |
+| `tree` | 递归目录树层级拓扑与本地索引 | `uv run bdpan tree /videos [--depth 2] [--index index.json]` |
+| `upload` | 分片上传、断点续传与极速秒传 | `uv run bdpan upload ./local.mkv /videos/ [--overwrite]` |
+| `download` | 大文件分块断点续传下载 | `uv run bdpan download /videos/movie.mkv [-d ./downloads] [--overwrite]` |
+| `dlink` | 查询下载直链或导出多线程下载命令 | `uv run bdpan dlink /videos/movie.mkv [--aria2 \| --curl]` |
+| `ops` | 查看操作审计流水日志 | `uv run bdpan ops list [--limit 20]`<br>`uv run bdpan ops show <op_id>` |
+| `undo` | 逆向撤销历史批量操作回滚复原 | `uv run bdpan undo <op_id> [--dry-run] [-y]` |
+| `auth` | 网盘账号凭证管理与多账号切换 | `uv run bdpan auth list`<br>`uv run bdpan auth switch <alias>`<br>`uv run bdpan auth login [--account <alias>]` |
+| `info` | 探测视频媒体深度元数据（分辨率/编码/时长） | `uv run bdpan info /videos/movie.mkv [--json]` |
+| `stats` | 递归聚合统计目录总容量与媒体格式分布 | `uv run bdpan stats /videos/movies [--depth N] [--json]` |
+| `mcp` | 启动原生 Model Context Protocol Server (stdio) | `uv run bdpan mcp` |
+| `dedup` | 冲突副本 `(1)/(2)` 治理与隔离清理 | `uv run bdpan dedup /videos [--staging-dir /videos/pending_delete] [--dry-run]` |
+| `scrape foldering` | 散落媒体文件自动归集方案 A 规范目录 | `uv run bdpan scrape foldering /videos/unscraped [--dry-run]` |
 | `scrape preview` | 电影目录方案 A 刮削更名预览 | `uv run bdpan scrape preview /videos/movies/unwatched` |
 | `scrape apply` | 批量应用刮削重命名映射 | `uv run bdpan scrape apply preview.json --target-dir /videos/movies` |
-| `scrape foldering` | 散落媒体文件自动归集规范目录 | `uv run bdpan scrape foldering /videos/unscraped [--dry-run]` |
-| `dedup` | 冲突副本与重复项治理（支持暂存隔离与清理） | `uv run bdpan dedup /videos/unscraped [--staging-dir /videos/pending_delete] [--dry-run]` |
+| `quota` | 查询网盘总容量、已用空间与到期时间 | `uv run bdpan quota [--check-expire] [--check-free] [--json]` |
+| `whoami` | 查询当前网盘用户名与 VIP 等级 | `uv run bdpan whoami [--json]` |
 
 ---
 
-## 3. 核心功能与关键语义
+## 3. 核心子系统与关键语义
 
 ### 3.1 路径解析与移动/复制双语义 (`mv` / `cp`)
 `_resolve_dest` 解析规则：
@@ -55,90 +66,98 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
    * 若目标不存在或不以 `/` 结尾，将目标解析为 `目标目录/新名称`，实现移动/复制同时更名。
 3. **批量保护**：复制与移动在底层自动切分为 **50 项/批**，避免因百度 OpenAPI 超时导致事务失败。
 
-### 3.2 目录树与本地索引 (`tree`)
-* 由于百度网盘 OpenAPI 的 `xpanfilelistall` 受应用权限约束（返回 `errno=20020`），`tree` 命令采用**客户端深度优先递归 (`walk`)**。
-* 支持通过 `--depth N` 限制遍历深度。
-* 支持通过 `--index <output.json>` 将整棵目录树元数据（大小、fs_id、修改时间、目录拓扑）持久化为本地离线 JSON 索引。
+### 3.2 传输子系统：秒传、动态机房与断点下载
+* **极速秒传与动态机房 (`upload`)**：
+  * 在 `precreate` 阶段计算文件首片 256KB MD5 与全量 MD5 碰撞，若云端已存在相同特征（`return_type == 2`）直接极速秒传，消耗 0 流量。
+  * 分片上传前自动调用 `locate_upload_host` 动态获取距离当前客户端网络物理延迟最低的最优服务器 host。
+  * 断点续传通过 `.bdpan_uploads.json` 记忆 uploadid，支持中途意外断网或中断恢复。
+* **分块断点下载与高速直链 (`download` / `dlink`)**：
+  * 调用 OpenAPI 获取真实直链（`dlink`），强制注入 `User-Agent: pan.baidu.com` 请求头防 403 限速。
+  * 下载器通过 `.tmp` 临时文件与 HTTP Range 协议分块传输，支持意外中断恢复；`dlink` 命令可一键输出适用于 `aria2c`（16线程）或 `curl` 的下载脚本。
 
-### 3.3 大文件分片上传与断点续传 (`upload`)
-* 采用 4MB 分片分段上传逻辑：
-  1. `precreate`：计算全量 MD5 及分片 MD5，向网盘申请 `uploadid`。
-  2. `upload_slice`：校验本地续传记录 `.bdpan_uploads.json`，仅上传云端缺失分片。
-  3. `create`：合并分片创建文件。
-* 覆盖选项：`--overwrite` 对应网盘 `rtype=3`（覆盖同名文件）；默认为 `rtype=1`（同名自动追加序号，如 `filename(1).mkv`）。
+### 3.3 安全运维：操作流水与逆向撤销 (`ops` & `undo`)
+* 任何通过 `mv`、`rename` 执行的文件移动或更名均落盘至 `.bdpan_ops/<op_id>.json`（包含时间、账号、执行命令及源目的映射元组清单）。
+* `bdpan undo <op_id>` 能够严格逆向计算出反向移动动作，支持 `--dry-run` 查看回滚方案；执行完成后标记状态为已撤销，防止重复回滚错乱。
 
-### 3.4 电影刮削与媒体库整理规范 (`scrape`)
+### 3.4 媒体可观测性与目录统计 (`info` & `stats`)
+* `bdpan info <file>`：提取视频真实宽高，自动归一化为行业标准标称（如 `3840x2160 (4K UHD)`、`1080P FHD`），输出精准时长（`HH:MM:SS`）、视频编码格式（HEVC/H.264/AV1）及音频轨道数量。
+* `bdpan stats <dir>`：递归统计目录下总大小、总文件数、子目录数，并输出视频、字幕、海报图片等不同分类和常见扩展名的容量与占比。
+
+### 3.5 AI 原生集成：Model Context Protocol (`mcp`)
+* 纯净原生实现的标准 MCP Server，基于 `stdio` 运行 JSON-RPC 2.0 协议。
+* 自省暴露 14 个网盘管理与观测工具，支持 Claude Code、Cursor、Antigravity 等主流 AI 编程助手直接编排调用。
+
+### 3.6 电影刮削与媒体库整理规范 (`scrape`)
 本项目媒体库遵循 **方案 A 规范目录名**：
 ```text
 {中文译名}.{英文原名}.{上映年份}.{IMDb ID}[.{特别版本标识}]
 例如: 超时空接触.Contact.1997.tt0118884
       白日梦想家.The.Secret.Life.of.Walter.Mitty.2013.tt0359950.Remux-BONZO
 ```
-
 * **元数据检索链路**：IMDb ID / 规范特征提取 ➔ TMDB API（zh-CN 优先，en-US 兜底）➔ 豆瓣候选建议补全中文片名。
 * **工作流**：
   1. **散落文件归集**：使用 `bdpan scrape foldering /path/unscraped` 将视频、外挂字幕与压缩包自动归集入方案 A 规范新建目录中。
   2. **更名预演**：运行 `bdpan scrape preview <dir> --output preview.json` 生成预演映射表供审阅。
   3. **确认应用**：审阅后运行 `bdpan scrape apply preview.json` 执行实际重命名。
 
-### 3.5 冲突副本治理与重复项清理 (`dedup`)
-在网盘多次上传或合并时，常因重命名规则残留大量形如 `(1)`、`(2)` 的冲突副本或空目录。
-* **冲突检测规则**：
-  * 精确识别 `name (1)`、`name (2)`、`name(1).mkv` 等后缀模式，自动排除 4 位年份数字（如 `(1995)`、`(2021)`）。
-  * 存在主条目时标记为高置信度冲突副本；无主条目时可开启 `--include-orphans` 保留最低序号并标记其余副本；支持 `--include-empty` 扫描并清理空目录。
-* **安全动作**：
-  * 默认/`--dry-run`：仅分析输出待治理清单与总容量统计，不触发任何网盘变更。
-  * `--staging-dir <dir>`：将检测到的冲突副本批量安全移动至隔离暂存目录（如 `/videos/movies/pending_delete`），避免不可逆的直接误删。
-  * `--delete`：直接移入网盘回收站（交互确认或 `-y` 跳过）。
-* **底层批处理**：底层依赖 `FileManager.batch_move` / `FileManager.batch_delete`，严格遵守单批 50 项保护上限。
-
 ---
 
 ## 4. 常见工作流指导 (Workflows)
 
-### 场景一：检查目录结构与空间
+### 场景一：检查网盘状态与配额
 ```bash
-# 查看网盘剩余空间
+# 查询空间容量（支持 --json）
 uv run bdpan quota
 
-# 列出媒体库顶级目录
-uv run bdpan ls /videos/movies
+# 探测当前登录用户信息
+uv run bdpan whoami
 
-# 导出电影目录离线索引以便快速检索
-uv run bdpan tree /videos/movies --depth 2 --index movies_index.json
+# 递归统计影视媒体库容量分布
+uv run bdpan stats /videos/movies --depth 2
 ```
 
-### 场景二：上传新下载的影视资源
+### 场景二：资源下载与高速直链提取
 ```bash
-# 断点续传上传本地 MKV 文件到网盘收件箱
-uv run bdpan upload /path/to/Interstellar.2014.2160p.mkv /videos/movies/unscraped/
+# 断点续传下载网盘大文件到本地 downloads 目录
+uv run bdpan download /videos/movies/Inception.2010/Inception.mkv -d ./downloads/
 
-# 查看收件箱
-uv run bdpan ls /videos/movies/unscraped
+# 提取高速直链并输出适用于 aria2c 的 16 线程下载命令
+uv run bdpan dlink /videos/movies/Inception.2010/Inception.mkv --aria2
 ```
 
-### 场景三：归集并规范化收件箱电影
+### 场景三：视频深度元数据探测
 ```bash
-# 1. 预演散落文件建目录归集方案
-uv run bdpan scrape foldering /videos/movies/unscraped --dry-run
-
-# 2. 确认无误后执行归集
-uv run bdpan scrape foldering /videos/movies/unscraped
-
-# 3. 将归集好的电影目录移入待看/已看目录
-uv run bdpan mv /videos/movies/unscraped/星际穿越.Interstellar.2014.tt0816692 /videos/movies/unwatched/
+# 探测网盘内某部电影的画质编码与音轨详情
+uv run bdpan info /videos/movies/Inception.2010/Inception.mkv
 ```
 
----
+### 场景四：误操作审计与一键逆向撤销
+```bash
+# 1. 查看最近执行的操作审计流水
+uv run bdpan ops list --limit 5
 
-## 5. 故障排查与技术限制 (Gotchas & Troubleshooting)
+# 2. 预演撤销某次批量误移动/误重命名
+uv run bdpan undo op_20261028_123456 --dry-run
 
-1. **不存在路径返回空列表**：
-   * 百度 OpenAPI `xpanfilelist` 在路径不存在时不抛异常，而是返回空列表 `[]`。
-   * 判断目录是否真正存在时，应检查其父目录的条目列表中是否包含该名称。
-2. **批量操作批大小上限 (50)**：
-   * 网盘重命名、复制、移动 API 对单次请求 items 数量有限制，超过 50 个容易引发超时或网关截断。`FileManager` 已内建批大小切分，调用 SDK 底层接口时请勿单批超过 50。
-3. **软删除语义 (`rm`)**：
-   * `rm` 操作实际上将网盘条目移入百度网盘「回收站」，不会立即彻底物理擦除，仍可在网页端回收站恢复。
-4. **Token 缓存与刷新**：
-   * 若遇到授权过期或 401 报错，检查 `.env` 配置，或删除 `.baidupan_tokens.json` 后重新触发鉴权。
+# 3. 确认无误，执行一键还原
+uv run bdpan undo op_20261028_123456 -y
+```
+
+### 场景五：多网盘账号管理与隔离操作
+```bash
+# 查看本地保存的所有账号
+uv run bdpan auth list
+
+# 切换当前默认活跃账号
+uv run bdpan auth switch work
+
+# 单次命令临时使用备份账号执行，不影响当前默认账号
+uv run bdpan --account backup ls /videos
+```
+
+### 场景六：AI 助手连接网盘 MCP
+在 Claude Code、Cursor 或 Antigravity 中配置命令：
+```bash
+uv run --directory /path/to/bdpan-cli bdpan mcp
+```
+AI 助手将自动获取包含 `bdpan_ls`、`bdpan_info`、`bdpan_stats`、`bdpan_mv` 等 14 个工具，可直接对话指挥 AI 整理和运维网盘。
