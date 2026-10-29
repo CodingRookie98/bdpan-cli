@@ -12,6 +12,7 @@ import os
 import sys
 from typing import Any, Callable
 
+from bdpan_cli._version import __version__
 from bdpan_cli.account import AccountClient
 from bdpan_cli.file_manager import FileManager, FileManagerError
 from bdpan_cli.media_info import MediaInfoClient, MediaInfoError
@@ -39,7 +40,7 @@ class BdpanMcpServer:
         self.protocol_version = "2024-11-05"
         self.server_info = {
             "name": "bdpan-mcp",
-            "version": "0.1.0",
+            "version": __version__,
         }
 
     def _get_file_manager(self) -> FileManager:

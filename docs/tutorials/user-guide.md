@@ -42,7 +42,7 @@ pip install bdpan-cli
 安装完成后，可通过以下命令验证 CLI 工具是否就绪：
 ```bash
 bdpan --version
-# 输出: bdpan 0.1.0
+# 输出: bdpan 0.2.0
 ```
 
 ---

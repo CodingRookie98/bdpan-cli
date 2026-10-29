@@ -2,7 +2,7 @@
 
 > 记录每次交付的功能与文档演进。格式：日期 + 版本 + 变更摘要。
 
-## 2026-10-29
+## [0.2.0] - 2026-10-29
 
 - **feat(auth)**: 纯净 BYOK 认证配置、XDG 全局配置链条与优雅登录体验（BK-0043）。
   - **BK-0043 (BYOK 凭证配置与一键浏览器登录)**:
@@ -11,6 +11,11 @@
     - **全新 `bdpan auth config` 子命令**: 提供 `--app-key`、`--secret-key`、`--show`（脱敏查看凭证来源与状态）、`--path`（打印配置文件物理路径）以及交互式终端引导输入，用户全局配置一次后可在任意目录执行 `bdpan`；
     - **一键浏览器唤起**: `_device_flow` 在获取设备码后自动通过 `webbrowser.open` 唤起系统默认浏览器打开百度网盘设备授权页面，终端大字高亮显示 User Code，免去繁琐的手动复制打开步骤；
     - **单测全绿保障**: 新增 `tests/test_config.py`（9 项单元测试）并扩展 `tests/test_auth.py`（1 项单元测试），全量回归测试套件增至 193 项全绿通过（`193 passed in 8.78s`）。
+- **feat(release)**: 自动化 Release Notes 提取与 GitHub Release 工作流治理。
+  - **Release Notes 自动化提取**: 引入 `scripts/extract-release-notes.py`，从 `changelog.md` 提取结构化变更并整合多渠道安装指引；
+  - **Release 工作流解耦**: `.github/workflows/release.yml` 引入 `create-release` 阶段，开启 `generate_release_notes: true`，矩阵多平台二进制仅追加上传。
+
+## [0.1.0] - 2026-10-29
 
 - **feat(cli)**: 引入 `_version.py` 版本单一真相源与 CLI `-V`/`--version` 版本自省支持，正式发布 v0.1.0 开源首发版（BK-0042）。
   - **BK-0042 (首个开源版本 v0.1.0 与版本自省支持)**:
