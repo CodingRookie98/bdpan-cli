@@ -875,7 +875,11 @@ def cmd_mcp(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bdpan",
-        description="百度网盘工程化 CLI 管理工具\n提供文件组织、大文件断点续传、影视媒体规范化刮削、安全审计流水与原生 MCP 集成。",
+        description="""百度网盘工程化 CLI 管理工具
+开源仓库: https://github.com/CodingRookie98/bdpan-cli
+作者信息: CodingRookie98 <520whjoker@gmail.com>
+
+提供文件组织、大文件断点续传、影视媒体规范化刮削、安全审计流水与原生 MCP 集成。""",
         epilog="""示例:
   bdpan ls /videos/movies
   bdpan upload ./local.mkv /videos/movies/
@@ -884,9 +888,11 @@ def build_parser() -> argparse.ArgumentParser:
   bdpan ops list
   bdpan mcp
 
-文档与支持:
-  用户指南: docs/tutorials/user-guide.md
-  项目地址: https://github.com/CodingRookie98/bdpan-cli""",
+开源仓库与作者:
+  开源仓库: https://github.com/CodingRookie98/bdpan-cli
+  问题反馈: https://github.com/CodingRookie98/bdpan-cli/issues
+  作者信息: CodingRookie98 <520whjoker@gmail.com>
+  用户指南: docs/tutorials/user-guide.md""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(

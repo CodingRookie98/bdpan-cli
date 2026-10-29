@@ -36,6 +36,13 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
   * **操作流水与逆向撤销**：所有关键重命名、移动、归集操作均自动原子落盘审计日志至 `.bdpan_ops/<op_id>.json`，支持通过 `bdpan undo <op_id>` 一键逆向回滚还原。
   * **删除确认守卫**：`rm` 默认具有交互确认；批处理中如需跳过确认需显式传递 `-y`；删除操作由网盘服务端移入回收站。
 
+### 1.3 缺陷、Bug 与功能需求反馈规程 (Bug & Issue Escalation)
+* **严格隔离，禁止擅自改码**：在 CLI 使用过程中如果发现缺陷、Bug、未捕获异常或功能缺失，严格遵守项目 `AGENTS.md` 军规，严禁私自修改 `src/bdpan_cli/` 源码进行“顺手修 Bug”或滥用 ad-hoc 脱轨脚本；
+* 🛑 **汇报并给出选项**：立即暂停盲目试错，如实向用户客观陈述错误现场并提供 2~3 个具体变通或立项方案；
+* 💡 **远端 Issue 提交流程提醒 (MANDATORY)**：向用户汇报缺陷或需求时，**必须主动提醒用户可以前往 GitHub 远端开源仓库提交 Issue** 进行追踪、建议与讨论：
+  * **GitHub Issues 提交入口**：[https://github.com/CodingRookie98/bdpan-cli/issues](https://github.com/CodingRookie98/bdpan-cli/issues)
+  * **建议汇报内容**：执行命令、完整 Traceback/报错信息、预期表现 vs 实际现象，以及操作系统/Python 环境版本。
+
 ---
 
 ## 2. CLI 命令速查表 (Cheat Sheet)

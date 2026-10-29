@@ -4,6 +4,10 @@
 
 ## 2026-10-29
 
+- **feat(cli)**: 顶层帮助打印开源仓库与作者信息，确立远端 Issue 反馈指引与代码库正式开源上云（BK-0040）。
+  - **BK-0040 (开源仓库推送与元信息展示)**: 正式创建并推送公开远端仓库 `origin` 至 `https://github.com/CodingRookie98/bdpan-cli`；`cli.py` 顶层 `--help` 顶部描述与底部 `epilog` 正式输出开源仓库地址、Issue 反馈入口与作者信息；
+  - **Skill 与行为军规治理**: 在 `skills/bdpan-cli/SKILL.md` 与根目录 `AGENTS.md` 中增加 §1.3 规约，规定在使用过程中发现任何 Bug、缺陷或功能需求时，在向用户汇报的同时必须主动提醒用户可在 GitHub 远端仓库提交 Issue 反馈；
+  - **单测增强**: `test_cli_subparsers_rich_help` 断言覆盖顶层 `--help` 仓库地址与作者信息，全量 175 项测试全绿。
 - **feat(cli)**: CLI 全局 --help 体验与实操示例完善及 Skill 安装审批治理（BK-0039）。
   - **BK-0039 (--help 丰富度与实战样例)**: `cli.py` 为全量 32 个一级与二级子命令全面增补 `description` 功能定位概述与底部的 `epilog` 实操高频调用样例（涵盖单源改名/多源复制、大文件秒传与断点续传、直链提取与多线程导出、影视刮削预演应用与自定义模板组合、操作审计回滚、多账号管理隔离与 MCP stdio 启动等）；统一配置 `RawDescriptionHelpFormatter` 保留排版结构；完善参数默认值标注；
   - **智能体 Skill 治理与审批红线**: 更新 `skills/bdpan-cli/SKILL.md`，增加 5 种安装指引，并确立在环境中缺失 `bdpan` CLI 时智能体必须暂停并明确向用户获得安装审批的严格军规；

@@ -968,7 +968,11 @@ def test_cli_scrape_commands_with_format(capsys):
 def test_cli_subparsers_rich_help():
     parser = build_parser()
     assert parser.description and "百度网盘工程化 CLI 管理工具" in parser.description
+    assert "https://github.com/CodingRookie98/bdpan-cli" in parser.description
+    assert "CodingRookie98" in parser.description
     assert parser.epilog and "示例:" in parser.epilog
+    assert "https://github.com/CodingRookie98/bdpan-cli" in parser.epilog
+    assert "CodingRookie98" in parser.epilog
 
     # 抽样验证核心子命令均配备 description 与示例 epilog
     subparsers_action = parser._subparsers._group_actions[0]
@@ -976,6 +980,7 @@ def test_cli_subparsers_rich_help():
         subp = subparsers_action.choices[cmd]
         assert subp.description is not None, f"子命令 {cmd} 缺少 description"
         assert subp.epilog is not None and "示例:" in subp.epilog, f"子命令 {cmd} 缺少示例 epilog"
+
 
 
 

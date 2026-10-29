@@ -28,6 +28,7 @@
 
 ## 已关闭
 
+- [x] BK-0040 顶层帮助打印开源仓库与作者信息、确立远端 Issue 反馈指引与代码库正式开源上云（创建并推送远端公共仓库 `origin` 至 `https://github.com/CodingRookie98/bdpan-cli`；`cli.py` 顶层 `--help` 头部描述与底部 `epilog` 输出开源地址与作者信息；`skills/bdpan-cli/SKILL.md` 与 `AGENTS.md` 增加缺陷主动提醒远端提 Issue 规约；单测 175 项全绿，2026-10-29）
 - [x] BK-0039 CLI 全局 --help 体验与示例完善及 Skill 安装审批治理（`cli.py` 为全量 32 个一级与二级子命令全面配备规范的 `description` 功能定位概述、底部 `epilog` 实操高频调用样例与显式默认值标注；`skills/bdpan-cli/SKILL.md` 增加安装指南，并确立系统缺失 CLI 时必须向用户明确申请安装审批方可安装的强制军规；单测 174→175 全绿，2026-10-29）
 - [x] BK-0038 电影刮削目录命名自定义模板支持（`scraper.py` 新增 `MovieMetadata.format_name` 与 SafeDict 容错字典映射，支持 `{title}`, `{original_title}`, `{year}`, `{id}`, `{imdb_id}`, `{tmdb_id}`, `{edition}` 占位符自由组合；`preview_scrape.py` 与 `foldering.py` 新增 `name_format` 参数；`cli.py` 在 `scrape preview` 与 `scrape foldering` 增加 `--format` 选项，未指定时默认保持方案 A 行为 100% 向后兼容；单元测试 170→174 全绿，2026-10-29）
 - [x] BK-0037 原生 MCP (Model Context Protocol) Server 集成（新增 `mcp_server.py` 与 `bdpan mcp` 子命令，基于标准 stdio 纯净实现 JSON-RPC 2.0 协议生命周期 initialize/ping/tools/list/tools/call，自省暴露网盘 14 项核心文件管理与可观测性 Tool Schemas，支持 Claude Code、Antigravity、Cursor 直接调用；单测全绿，2026-10-28）
@@ -70,8 +71,8 @@
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V2.3.0 | 2026-10-29 | 开源上云与元信息呈现：关闭 BK-0040（代码库推送至 GitHub 公开仓库，顶层 --help 展示仓库与作者信息，SKILL.md 补充远端提 Issue 反馈指引），单测 175 项全绿 |
 | V2.2.0 | 2026-10-29 | CLI 体验与审批门禁交付：关闭 BK-0039（`cli.py` 32 个命令补齐 description 概述与底部实战示例 epilog，SKILL.md 补充安装说明与未安装强制审批军规），单测 174→175 全绿 |
 | V2.1.0 | 2026-10-29 | 电影刮削自定义模板交付：关闭 BK-0038（`format_name` 字段自由组合与容错字典，`scrape preview` / `foldering` 新增 `--format` 参数，默认方案 A 向后兼容），单测 170→174 全绿 |
 | V2.0.0 | 2026-10-28 | Phase 3/4 安全体系与 AI 原生交付：关闭 BK-0034~BK-0037（操作流水审计/逆向撤销、多账号隔离、媒体深度元数据探测/聚合统计、原生 stdio MCP Server），单测 140→170 全绿 |
 | V1.9.0 | 2026-10-28 | Phase 2 传输核心交付：关闭 BK-0032（Downloader 模块、`download` 断点续传与 `dlink` 直链与防限速）与 BK-0033（极速秒传机制与 `locate_upload_host` 动态机房接入），测试 128→140 全绿 |
-| V1.8.0 | 2026-10-28 | Phase 1 开源打包交付：关闭 BK-0029~BK-0031（Vendor SDK 内联化解耦、开源 MIT/Contributing 建设、CI/CD 与多平台 PyInstaller 二进制发布） |
