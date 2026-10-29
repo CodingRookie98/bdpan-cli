@@ -37,6 +37,9 @@ jobs:
 
       - name: L1 Unit tests
         run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
+        env:
+          BAIDU_APP_KEY: mock_ci_app_key
+          BAIDU_SECRET_KEY: mock_ci_secret_key
 
       - name: Doc links verification
         run: |

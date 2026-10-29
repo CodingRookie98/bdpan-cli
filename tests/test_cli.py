@@ -809,7 +809,8 @@ def test_cli_auth_switch(capsys):
 
 
 def test_cli_account_flag(capsys):
-    with patch("bdpan_cli.cli.TokenManager") as mock_tm_cls:
+    with patch("bdpan_cli.cli.load_config", return_value={"BAIDU_APP_KEY": "fake_key", "BAIDU_SECRET_KEY": "fake_secret"}), \
+         patch("bdpan_cli.cli.TokenManager") as mock_tm_cls:
         mock_tm = MagicMock()
         mock_tm.get_access_token.return_value = "fake_token_backup"
         mock_tm_cls.return_value = mock_tm
