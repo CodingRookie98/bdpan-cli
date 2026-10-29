@@ -67,8 +67,9 @@ BAIDU_PAN_SIGN_KEY=
 
 ### 2.3 账号首次登录授权
 在配置好 `.env` 后，运行任一查询命令（如 `bdpan whoami` 或 `bdpan auth login`）：
-- **桌面有头环境**：CLI 会自动在默认浏览器中打开百度授权页面，登录并确认授权后自动将 Token 安全存储于本地 `.baidupan_tokens.json` 中。
+- **桌面有头环境**：CLI 会自动在默认浏览器中打开百度授权页面，登录并确认授权后自动将 Token 凭据安全存储于遵循 XDG 规范的用户目录 `~/.config/bdpan/tokens.json`（权限 `0o600`，由 `TokenManager` 自动管理并在剩余不足 1 天时静默刷新）。
 - **无头服务器/SSH 环境**：终端会输出完整的授权登录 URL。请在任意外部浏览器中打开该链接，登录授权完成后将浏览器地址栏跳转后的完整 URL 或 `code` 复制并粘贴回终端，即可完成绑定。
+- **向下无缝兼容**：系统初次启动时，若检测到旧版项目根目录下的 `.baidupan_tokens.json`，会自动将其无缝迁移至 `~/.config/bdpan/tokens.json`。
 
 ---
 
@@ -318,6 +319,21 @@ bdpan --json stats /videos/movies
   "error": null
 }
 ```
+
+### 9.4 诊断日志与调试模式 (`--debug`, `--quiet`)
+`bdpan-cli` 实现了严格的控制台与日志流分离架构，控制台日志输出至 `sys.stderr`，确保 `sys.stdout` 的管道重定向与 `--json` 解析不受任何干扰。
+```bash
+# 开启详细诊断模式（输出底层 HTTP 请求头、响应体、模块名与行号）
+bdpan --debug ls /videos/movies
+
+# 静音模式（仅打印 ERROR 及以上级别异常，适合无交互定时任务）
+bdpan -q quota
+
+# 本地滚动日志文件
+# 所有 DEBUG 级别完整调用明细会自动双写落盘至：
+~/.config/bdpan/logs/bdpan.log  # (默认最大 10MB x 5 份自动轮转)
+```
+
 
 ---
 

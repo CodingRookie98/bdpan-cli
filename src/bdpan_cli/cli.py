@@ -23,9 +23,9 @@ from bdpan_cli.ops import OperationLogger, UndoEngine, UndoError
 from bdpan_cli.preview_scrape import generate_preview
 from bdpan_cli.uploader import Uploader
 from bdpan_cli.apply_scrape_rename import apply_renames
+from bdpan_cli.logger import setup_logging, get_logger
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-logger = logging.getLogger("bdpan_cli.cli")
+logger = get_logger("bdpan_cli.cli")
 
 # 断点续传状态文件：与 token 缓存同目录（项目根，git-ignored）
 UPLOAD_STATE_FILE = TOKEN_CACHE.parent / ".bdpan_uploads.json"
@@ -905,6 +905,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="以标准化 JSON 格式输出结果 (便于脚本与机器解析)",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        "--debug",
+        dest="debug",
+        action="store_true",
+        help="开启详细调试日志输出 (输出 HTTP 诊断与详细异常追踪)",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="静音非错误输出",
+    )
     subparsers = parser.add_subparsers(dest="command", help="可用子命令")
 
     # 1. ls
@@ -1392,6 +1406,8 @@ def main(argv: list[str] | None = None) -> int:
         args_list = ["ls", args_list[0]] + args_list[1:]
 
     args = parser.parse_args(args_list)
+
+    setup_logging(debug=args.debug, quiet=args.quiet)
 
     if not hasattr(args, "func"):
         parser.print_help()

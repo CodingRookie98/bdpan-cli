@@ -77,10 +77,13 @@ bdpan auth switch <alias>                    # Switch default active account
 bdpan auth login [--account <alias>]         # Authorize/login to a specific account
 bdpan --account <alias> <subcommand>         # Run command under a specific account tenant
 
-# Media Observability & Global JSON Envelope
+# Media Observability & Global Options
 bdpan info /videos/movies/Inception.mkv       # Probe 4K/1080P resolution, duration, HEVC codec & audio tracks
 bdpan stats /videos/movies [--depth N]       # Recursive storage breakdown and media category stats
 bdpan --json <subcommand>                    # Machine-readable standardized JSON envelope for scripting
+bdpan --debug <subcommand>                   # Detailed diagnostic debug logs (stderr & ~/.config/bdpan/logs/)
+bdpan -q <subcommand>                        # Quiet mode (only ERROR level)
+
 
 # AI Agent Integration (Model Context Protocol / MCP)
 bdpan mcp                                    # Launch standard stdio MCP Server for AI coding assistants
@@ -103,7 +106,7 @@ Environment variables:
 - `BAIDU_PAN_SECRET_KEY`: Your Open Platform Secret Key.
 - `BAIDU_PAN_SIGN_KEY`: (Optional) Your Sign Key if signature verification is enabled.
 
-When executing commands for the first time, `bdpan` will open your default browser (or prompt an authorization link in headless environments) to authenticate via OAuth 2.0. The acquired tokens are securely cached in `.baidupan_tokens.json`.
+When executing commands for the first time, `bdpan` will open your default browser (or prompt an authorization link in headless environments) to authenticate via OAuth 2.0. The acquired tokens are securely stored in `~/.config/bdpan/tokens.json` (chmod 0600). Diagnostic execution logs are persisted under `~/.config/bdpan/logs/bdpan.log`.
 
 ---
 

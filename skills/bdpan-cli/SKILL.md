@@ -28,9 +28,12 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
 * **全局通用选项**：
   * `--account <alias>`：单次命令指定操作账号别名（支持多租户账号隔离并发操作）。
   * `--json`：所有核心查询命令均支持标准化 JSON 信封输出（`{"success": true, "code": 0, "data": ..., "error": null}`），便于脚本或流水线消费。
-* **认证凭据**：
+  * `--debug` / `-v`：开启详细调试日志（输出 HTTP 请求/响应细节与代码行号，控制台输出至 `stderr`，不污染 `stdout`）。
+  * `--quiet` / `-q`：静音非错误输出（仅输出 `ERROR` 级别）。
+* **认证凭据与日志持久化**：
   * 应用密钥配置于项目根目录 `.env`（`BAIDU_PAN_APP_KEY`, `BAIDU_PAN_SECRET_KEY`）。
-  * 授权 Token 自动缓存在 `.baidupan_tokens.json`，由 `TokenManager` 自动管理并在过期前（剩余 < 1天）静默刷新，支持多账号别名存储。
+  * 授权 Token 遵循 XDG 规范自动保存在用户目录 `~/.config/bdpan/tokens.json`（权限 `0o600`，由 `TokenManager` 自动管理并在剩余不足 1 天时静默刷新；无缝自动兼容迁移旧版项目级 `.baidupan_tokens.json`）。
+  * 运行日志持久化双写至 `~/.config/bdpan/logs/bdpan.log`（保留 5 个 10MB 轮转文件，完整保留 DEBUG 追踪细节）。
 * **安全底线与审计防线**：
   * **只读先行与预演原则**：对网盘进行批量改名、移动或删除操作前，先通过只读命令（`ls`、`tree`、`scrape preview`、`--dry-run`）核对路径与影响范围。
   * **操作流水与逆向撤销**：所有关键重命名、移动、归集操作均自动原子落盘审计日志至 `.bdpan_ops/<op_id>.json`，支持通过 `bdpan undo <op_id>` 一键逆向回滚还原。

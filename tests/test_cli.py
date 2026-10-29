@@ -982,6 +982,25 @@ def test_cli_subparsers_rich_help():
         assert subp.epilog is not None and "示例:" in subp.epilog, f"子命令 {cmd} 缺少示例 epilog"
 
 
+def test_cli_debug_and_quiet_flags(tmp_path, monkeypatch):
+    log_file = tmp_path / "cli.log"
+    monkeypatch.setenv("BDPAN_LOG_FILE", str(log_file))
+
+    with patch("bdpan_cli.cli._get_file_manager") as mock_mgr_getter:
+        mock_mgr = MagicMock()
+        mock_mgr.list_dir.return_value = []
+        mock_mgr_getter.return_value = mock_mgr
+
+        # 1. 测试 --debug 标志
+        exit_code = main(["--debug", "ls", "/"])
+        assert exit_code == 0
+
+        # 2. 测试 --quiet 标志
+        exit_code = main(["--quiet", "ls", "/"])
+        assert exit_code == 0
+
+
+
 
 
 

@@ -8,7 +8,6 @@ from bdpan_cli.auth import TokenManager
 from bdpan_cli.config import load_config
 from bdpan_cli.file_manager import FileManager
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 ROOT_UNWATCHED = "/影视/电影/unwatched"

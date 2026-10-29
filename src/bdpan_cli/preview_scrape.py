@@ -13,7 +13,6 @@ from bdpan_cli.config import load_config
 from bdpan_cli.file_manager import FileManager
 from bdpan_cli.scraper import MovieScraper
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
 # 方案 A 规范匹配模式（包含 4 位年份与 tt 或 tmdb ID，不含压制发布组标签）

@@ -74,10 +74,13 @@ bdpan auth switch <alias>                 # 切换当前默认活跃账号
 bdpan auth login [--account <alias>]      # 登录/重新授权指定账号别名
 bdpan --account <alias> <subcommand>      # 临时以指定账号执行单次命令（多租户并发隔离）
 
-# 媒体可观测性与全局 JSON 信封 (Media Insights & JSON)
+# 媒体可观测性与全局选项 (Media Insights & Global Options)
 bdpan info /影视/电影/Inception.mkv        # 探测视频精准分辨率(4K/1080P)、时长、HEVC编码与音轨
 bdpan stats /影视/电影 [--depth N]        # 递归聚合统计目录总容量、总文件数及媒体格式分类占比
 bdpan --json <subcommand>                 # 所有核心查询命令支持标准化 JSON 信封输出（脚本化集成）
+bdpan --debug <subcommand>                # 开启详细诊断调试日志（输出至 stderr，双写至 ~/.config/bdpan/logs/）
+bdpan -q <subcommand>                     # 静音非错误输出（仅保留 ERROR）
+
 
 # AI 原生集成 (Model Context Protocol / MCP)
 bdpan mcp                                 # 启动标准 stdio MCP Server，供 Claude Code / Cursor / AI 智能体调用
@@ -104,13 +107,14 @@ uv run bdpan --help
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 uv run pytest
 ```
 
-## 应用凭证配置
+## 应用凭证与用户数据
 
-复制模板并填入开放平台应用的 AppKey / AppSecret（`.env` 已被 git 忽略，不会提交）：
-
+1. 开发者应用密钥：复制模板并填入开放平台应用的 AppKey / AppSecret（`.env` 已被 git 忽略，不会提交）：
 ```bash
 cp .env.example .env
 ```
+2. 用户登录授权凭据：用户首次通过 OAuth 登录授权后，Token 自动保存在 `~/.config/bdpan/tokens.json`（受系统权限 `0o600` 保护）。
+3. 诊断调试日志：完整执行细节自动落盘双写至 `~/.config/bdpan/logs/bdpan.log`。
 
 ---
 

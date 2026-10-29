@@ -86,3 +86,35 @@ def test_switch_nonexistent_account_raises(tmp_path):
     with pytest.raises(ValueError) as exc_info:
         tm.switch_account("non_existent")
     assert "不存在" in str(exc_info.value)
+
+
+def test_token_manager_default_path_and_env_override(tmp_path, monkeypatch):
+    custom_path = tmp_path / "custom" / "tokens.json"
+    monkeypatch.setenv("BDPAN_TOKEN_PATH", str(custom_path))
+    tm = TokenManager(_make_config())
+    assert tm._cache_path == custom_path
+
+
+def test_token_manager_auto_migrate_legacy_file(tmp_path, monkeypatch):
+    target_cache = tmp_path / "xdg" / "tokens.json"
+    legacy_file = tmp_path / "legacy" / ".baidupan_tokens.json"
+    legacy_file.parent.mkdir(parents=True, exist_ok=True)
+    legacy_data = {
+        "access_token": "legacy_tok",
+        "refresh_token": "legacy_ref",
+        "expires_at": int(time.time()) + 3600 * 24 * 10,
+    }
+    legacy_file.write_text(json.dumps(legacy_data))
+
+    monkeypatch.setattr("bdpan_cli.auth.DEFAULT_TOKEN_FILE", target_cache)
+    monkeypatch.setattr("bdpan_cli.auth.LEGACY_TOKEN_CACHE", legacy_file)
+    monkeypatch.delenv("BDPAN_TOKEN_PATH", raising=False)
+
+    tm = TokenManager(_make_config())
+    assert tm.get_access_token() == "legacy_tok"
+    assert target_cache.exists()
+    migrated_json = json.loads(target_cache.read_text())
+    assert migrated_json["current"] == "default"
+    assert migrated_json["accounts"]["default"]["access_token"] == "legacy_tok"
+
+

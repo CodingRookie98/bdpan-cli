@@ -4,6 +4,13 @@
 
 ## 2026-10-29
 
+- **feat(auth/logger)**: 日志治理方案 A 落地与 Token 凭证存储迁移至 XDG 规范 `~/.config/bdpan/tokens.json`（BK-0041）。
+  - **BK-0041 (日志治理方案 A 与安全凭证存储)**:
+    - **Token 存储与无缝迁移**: 凭证持久化重构为 XDG 规范，默认保存至 `~/.config/bdpan/tokens.json`，并强制施加 `0o600` 严格文件访问权限；`TokenManager` 增加向后兼容与自动平滑迁移能力，若检测到旧项目根目录 `.baidupan_tokens.json` 自动导入新路径；新增 `BDPAN_TOKEN_PATH` 环境变量支持自定义凭据路径；
+    - **日志治理方案 A**: 新增 `logger.py` 模块，实现统一日志输出；控制台 Handler 绑定 `sys.stderr`，杜绝日志输出污染 `stdout`（保障 `bdpan --json` 与 Unix 管道无干扰）；文件日志使用 `RotatingFileHandler` 自动双写落盘至 `~/.config/bdpan/logs/bdpan.log`（单文件 10MB，保留 5 个轮转历史，总上限 50MB），支持 `BDPAN_LOG_FILE` 覆盖；
+    - **CLI 命令行接入**: 根解析器接入全局 `-v`/`--verbose`/`--debug`（将控制台日志级别下探至 DEBUG 并输出行号及请求细节）以及 `-q`/`--quiet`（静音模式，控制台仅输出 ERROR/CRITICAL，但文件日志依然完整记录）；全面清理子模块中重复的 `logging.basicConfig(...)`；
+  - **单测全绿保障**: 新增 `tests/test_logger.py`（4 项单元测试），扩充 `tests/test_auth.py`（2 项单元测试）与 `tests/test_cli.py`（1 项单元测试），全量回归测试套件达 182 项全绿通过（`182 passed in 9.05s`）。
+
 - **feat(cli)**: 顶层帮助打印开源仓库与作者信息，确立远端 Issue 反馈指引与代码库正式开源上云（BK-0040）。
   - **BK-0040 (开源仓库推送与元信息展示)**: 正式创建并推送公开远端仓库 `origin` 至 `https://github.com/CodingRookie98/bdpan-cli`；`cli.py` 顶层 `--help` 顶部描述与底部 `epilog` 正式输出开源仓库地址、Issue 反馈入口与作者信息；
   - **Skill 与行为军规治理**: 在 `skills/bdpan-cli/SKILL.md` 与根目录 `AGENTS.md` 中增加 §1.3 规约，规定在使用过程中发现任何 Bug、缺陷或功能需求时，在向用户汇报的同时必须主动提醒用户可在 GitHub 远端仓库提交 Issue 反馈；

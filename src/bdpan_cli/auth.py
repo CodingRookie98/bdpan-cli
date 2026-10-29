@@ -5,18 +5,23 @@ access_token 有效期 30 天，refresh_token 有效期 10 年。
 """
 
 import json
-import time
+import os
 from pathlib import Path
-
+import time
 from typing import Any
 
 from bdpan_cli._vendor import openapi_client
 from bdpan_cli._vendor.openapi_client.api.auth_api import AuthApi
 from bdpan_cli._vendor.openapi_client.rest import ApiException
-
 from bdpan_cli.config import AppConfig
 
-TOKEN_CACHE = Path(__file__).resolve().parents[2] / ".baidupan_tokens.json"
+# 默认用户端 Token 凭据路径遵循 XDG 规范 (~/.config/bdpan/tokens.json)
+DEFAULT_CONFIG_DIR = Path.home() / ".config" / "bdpan"
+DEFAULT_TOKEN_FILE = DEFAULT_CONFIG_DIR / "tokens.json"
+LEGACY_TOKEN_CACHE = Path(__file__).resolve().parents[2] / ".baidupan_tokens.json"
+
+# 向后兼容常量导出
+TOKEN_CACHE = DEFAULT_TOKEN_FILE
 SCOPE = "basic,netdisk"
 REFRESH_BEFORE_EXPIRY = 24 * 3600  # 剩余不足一天时先刷新
 
@@ -36,41 +41,63 @@ class TokenManager:
     ) -> None:
         self._config = config
         self._account = account
-        self._cache_path = Path(cache_path) if cache_path else TOKEN_CACHE
+        if cache_path:
+            self._cache_path = Path(cache_path)
+        else:
+            env_path = os.environ.get("BDPAN_TOKEN_PATH")
+            self._cache_path = Path(env_path) if env_path else DEFAULT_TOKEN_FILE
+
+    def _normalize_token_data(self, raw: dict[str, Any]) -> dict[str, Any]:
+        """标准化 token 字典，平滑兼容旧单账号形态与多账号形态。"""
+        if "access_token" in raw:
+            return {
+                "current": "default",
+                "accounts": {
+                    "default": {
+                        "access_token": raw.get("access_token"),
+                        "refresh_token": raw.get("refresh_token"),
+                        "expires_at": raw.get("expires_at"),
+                    }
+                },
+            }
+        if "accounts" not in raw or not isinstance(raw["accounts"], dict):
+            raw["accounts"] = {}
+        if "current" not in raw:
+            raw["current"] = "default"
+        return raw
 
     def _load_all(self) -> dict[str, Any]:
         """读取并兼容迁移缓存数据，返回统一的多账号结构字典。"""
+        # 若目标文件不存在，但存在旧项目级 .baidupan_tokens.json，则自动无缝迁移至 ~/.config/bdpan/tokens.json
         if not self._cache_path.exists():
+            if self._cache_path == DEFAULT_TOKEN_FILE and LEGACY_TOKEN_CACHE.exists():
+                try:
+                    legacy_data = json.loads(LEGACY_TOKEN_CACHE.read_text(encoding="utf-8"))
+                    migrated = self._normalize_token_data(legacy_data)
+                    self._save_all(migrated)
+                    return migrated
+                except (OSError, json.JSONDecodeError):
+                    pass
             return {"current": "default", "accounts": {}}
         try:
             raw = json.loads(self._cache_path.read_text(encoding="utf-8"))
             if not isinstance(raw, dict):
                 return {"current": "default", "accounts": {}}
-            # 兼容旧单账号形态
             if "access_token" in raw:
-                migrated = {
-                    "current": "default",
-                    "accounts": {
-                        "default": {
-                            "access_token": raw.get("access_token"),
-                            "refresh_token": raw.get("refresh_token"),
-                            "expires_at": raw.get("expires_at"),
-                        }
-                    },
-                }
-                self._cache_path.write_text(json.dumps(migrated, indent=2, ensure_ascii=False))
+                migrated = self._normalize_token_data(raw)
+                self._save_all(migrated)
                 return migrated
-            if "accounts" not in raw or not isinstance(raw["accounts"], dict):
-                raw["accounts"] = {}
-            if "current" not in raw:
-                raw["current"] = "default"
-            return raw
+            return self._normalize_token_data(raw)
         except (OSError, json.JSONDecodeError):
             return {"current": "default", "accounts": {}}
 
     def _save_all(self, data: dict[str, Any]) -> None:
         self._cache_path.parent.mkdir(parents=True, exist_ok=True)
         self._cache_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        try:
+            self._cache_path.chmod(0o600)
+        except OSError:
+            pass
 
     def get_active_account(self) -> str:
         """返回当前生效的账号别名。"""
