@@ -106,6 +106,44 @@ bdpan mcp                                 # 启动标准 stdio MCP Server，供 
 
 ---
 
+## Python SDK 快速上手 (Python API)
+
+除命令行之外，`bdpan-cli` 提供了开箱即用的现代化 Python SDK 客户端门面：
+
+```python
+from bdpan_cli import BaiduPan
+
+# 1. 零配置自动初始化（按顺序自动检索：环境变量 ➔ 当前目录 .env ➔ ~/.config/bdpan/.env）
+pan = BaiduPan()
+
+# 或传入特定凭据 / access_token 初始化
+# pan = BaiduPan(app_key="...", secret_key="...")
+# pan = BaiduPan(access_token="...")
+
+# 2. 浏览与文件操作
+files = pan.list_dir("/影视/电影")
+pan.mkdir("/影视/电影/科幻")
+pan.rename("/影视/电影/old.mkv", "new.mkv")
+pan.move("/影视/电影/old.mkv", "/影视/电影/归档/")
+
+# 3. 极速秒传与断点续传上传（支持进度回调）
+res = pan.upload("local_movie.mkv", remote_dir="/影视/电影", overwrite=False)
+
+# 4. 断点续传下载
+local_file = pan.download("/影视/电影/Inception.mkv", dest_dir="./downloads")
+
+# 5. 视频媒体深度元数据探测
+info = pan.get_media_info("/影视/电影/Inception.mkv")
+print(f"分辨率: {info['resolution']}, 时长: {info['duration']}, 编码: {info['video_codec']}")
+
+# 6. 用户信息与空间配额
+user = pan.whoami()
+quota = pan.get_quota()
+print(f"当前用户: {user['baidu_name']}, 网盘总空间: {quota['total_gb']} GB")
+```
+
+---
+
 ## 本地开发环境
 
 ```bash

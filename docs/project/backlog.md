@@ -1,7 +1,7 @@
 # 待办与后续方向 (Backlog)
 
 > **控制信息**
-> - **文档版本**: V1.13.0
+> - **文档版本**: V1.14.0
 > - **文档标识**: BKLG-bdpan-cli
 > - **生效日期**: 2026-10-29
 > - **条目规范**: `backlog-specification.md`
@@ -28,6 +28,7 @@
 
 ## 已关闭
 
+- [x] BK-0045 Python SDK 高层门面类 `BaiduPan` 接入（新增 `src/bdpan_cli/client.py`，对外提供高层统一门面 `BaiduPan`，聚合 `FileManager`、`Uploader`、`Downloader`、`AccountClient`、`MediaInfoClient` 与 `TokenManager`；支持零配置环境变量/XDG 级联加载与显式 Token/Key 传参；`__init__.py` 导出核心客户端与异常契约；新增 `tests/test_client.py` 8 项单测，单测 195→203 全绿，2026-10-29）
 - [x] BK-0044 自动化 Release Notes 提取与 GitHub Release 工作流治理（新增 `scripts/extract-release-notes.py`，支持按 tag/version 从 `changelog.md` 自动化提取变更说明并结合多渠道安装指南生成完整发布说明；重构 `.github/workflows/release.yml`，拆分 `create-release` 与 `build-binaries` 阶段，消除并发竞态并开启 `generate_release_notes: true`；消除 `mcp_server.py` 版本号硬编码；升级版本至 v0.2.0，单测 193→195 全绿，2026-10-29）
 - [x] BK-0043 纯净 BYOK 认证配置、XDG 全局配置链条与优雅登录体验（新增 `bdpan auth config` 子命令与 `save_global_config`，支持 `--app-key`、`--secret-key`、`--show`、`--path` 与交互式提示，遵循 XDG 规范写入 `~/.config/bdpan/.env` 且权限 0o600；`load_config()` 按环境变量 ➔ 当前目录 .env ➔ 全局配置优先级检索并抛出人性化 `ConfigError`，`main()` 顶层捕获彻底消除裸露 Traceback 并返回退出码 1；`_device_flow` 自动通过 `webbrowser.open` 唤起默认浏览器并终端高亮大字显示用户码；新增 `tests/test_config.py`，单测 183→193 全绿，2026-10-29）
 - [x] BK-0042 CLI 版本自省支持与首个正式开源版本 v0.1.0 发布交付（在 `src/bdpan_cli/_version.py` 确立版本单一真相源 `__version__ = "0.1.0"`，在 `cli.py` 根解析器支持 `-V`/`--version` 参数与测试用例，全量 183 项单测全绿；发布 Git Tag `v0.1.0` 触发 GitHub Releases 跨平台自动化构建流水线，2026-10-29）

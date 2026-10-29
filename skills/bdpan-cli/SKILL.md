@@ -31,7 +31,7 @@ description: Use when managing files on Baidu Netdisk (百度网盘) using bdpan
   * `--debug` / `-v`：开启详细调试日志（输出 HTTP 请求/响应细节与代码行号，控制台输出至 `stderr`，不污染 `stdout`）。
   * `--quiet` / `-q`：静音非错误输出（仅输出 `ERROR` 级别）。
 * **认证凭据与日志持久化**：
-  * 应用密钥配置于项目根目录 `.env`（`BAIDU_PAN_APP_KEY`, `BAIDU_PAN_SECRET_KEY`）。
+  * 应用密钥配置于项目根目录 `.env` 或全局 `~/.config/bdpan/.env`（`BAIDU_APP_KEY`, `BAIDU_SECRET_KEY`）。
   * 授权 Token 遵循 XDG 规范自动保存在用户目录 `~/.config/bdpan/tokens.json`（权限 `0o600`，由 `TokenManager` 自动管理并在剩余不足 1 天时静默刷新；无缝自动兼容迁移旧版项目级 `.baidupan_tokens.json`）。
   * 运行日志持久化双写至 `~/.config/bdpan/logs/bdpan.log`（保留 5 个 10MB 轮转文件，完整保留 DEBUG 追踪细节）。
 * **安全底线与审计防线**：
@@ -203,3 +203,22 @@ uv run bdpan --account backup ls /videos
 uv run --directory /path/to/bdpan-cli bdpan mcp
 ```
 AI 助手将自动获取包含 `bdpan_ls`、`bdpan_info`、`bdpan_stats`、`bdpan_mv` 等 14 个工具，可直接对话指挥 AI 整理和运维网盘。
+
+### 场景七：Python SDK 编程与代码内调用
+当需要在自有 Python 脚本、Web 服务或数据管道中调用百度网盘时，无需通过 CLI 子进程，直接导入高层客户端：
+```python
+from bdpan_cli import BaiduPan
+
+# 零配置自动初始化
+pan = BaiduPan()
+
+# 增删改查与分片断点续传
+files = pan.list_dir("/影视/电影")
+pan.upload("movie.mkv", remote_dir="/影视/电影")
+pan.download("/影视/电影/Inception.mkv", dest_dir="./downloads")
+
+# 媒体元数据与配额
+info = pan.get_media_info("/影视/电影/Inception.mkv")
+user = pan.whoami()
+quota = pan.get_quota()
+```

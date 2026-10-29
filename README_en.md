@@ -109,6 +109,44 @@ bdpan mcp                                    # Launch standard stdio MCP Server 
 
 ---
 
+## Python SDK Quickstart (Python API)
+
+In addition to CLI utilities, `bdpan-cli` provides an idiomatic high-level Python SDK client:
+
+```python
+from bdpan_cli import BaiduPan
+
+# 1. Zero-config auto-initialization (os.environ -> ./.env -> ~/.config/bdpan/.env)
+pan = BaiduPan()
+
+# Or initialize with explicit API keys or access_token
+# pan = BaiduPan(app_key="...", secret_key="...")
+# pan = BaiduPan(access_token="...")
+
+# 2. File and directory operations
+files = pan.list_dir("/videos/movies")
+pan.mkdir("/videos/movies/SciFi")
+pan.rename("/videos/movies/old.mkv", "new.mkv")
+pan.move("/videos/movies/old.mkv", "/videos/movies/archive/")
+
+# 3. Resumable chunked upload with rapid second-pass
+res = pan.upload("local_movie.mkv", remote_dir="/videos/movies", overwrite=False)
+
+# 4. Resumable chunked download
+local_file = pan.download("/videos/movies/Inception.mkv", dest_dir="./downloads")
+
+# 5. Video media metadata inspection
+info = pan.get_media_info("/videos/movies/Inception.mkv")
+print(f"Resolution: {info['resolution']}, Duration: {info['duration']}, Codec: {info['video_codec']}")
+
+# 6. Account and quota
+user = pan.whoami()
+quota = pan.get_quota()
+print(f"User: {user['baidu_name']}, Total Quota: {quota['total_gb']} GB")
+```
+
+---
+
 ## Configuration & Credentials
 
 Copy the configuration template and fill in your AppKey and SecretKey from the [Baidu Netdisk Open Platform](https://pan.baidu.com/union/doc/) (`.env` is git-ignored and never committed):

@@ -379,7 +379,66 @@ claude mcp add bdpan uv run bdpan mcp
 
 ---
 
-## 11. 常见问题与排错 (FAQ)
+## 11. Python SDK 开发者接入 (`BaiduPan`)
+
+除了作为终端命令行工具，`bdpan-cli` 提供了开箱即用的现代化高层 Python SDK 客户端门面，供 Python 开发者在自有脚本、Web 服务或自动化流程中直接调用。
+
+### 11.1 初始化客户端
+```python
+from bdpan_cli import BaiduPan
+
+# 方式 1：零配置自动初始化（按优先级检索：环境变量 ➔ 当前目录 .env ➔ ~/.config/bdpan/.env）
+pan = BaiduPan()
+
+# 方式 2：显式指定 API 凭据
+pan = BaiduPan(app_key="your_app_key", secret_key="your_secret_key")
+
+# 方式 3：已有 access_token 直接注入（适合 Web 请求头传递）
+pan = BaiduPan(access_token="your_access_token")
+
+# 方式 4：指定多账号别名
+pan = BaiduPan(account="work_pan")
+```
+
+### 11.2 文件增删改查
+```python
+# 浏览目录
+files = pan.list_dir("/影视/电影", limit=200)
+
+# 创建目录
+pan.mkdir("/影视/电影/动作片")
+
+# 重命名
+pan.rename("/影视/电影/old.mkv", "new.mkv")
+
+# 移动与复制
+pan.move("/影视/电影/old.mkv", "/影视/电影/归档/")
+pan.copy("/影视/电影/old.mkv", "/影视/电影/备份/", new_name="backup.mkv")
+
+# 删除（移入回收站）
+pan.delete("/影视/电影/temp.mkv")
+```
+
+### 11.3 传输与元数据
+```python
+# 极速秒传与断点续传上传（支持进度回调）
+res = pan.upload("local.mkv", remote_dir="/影视/电影", overwrite=False)
+
+# 断点续传下载
+local_file = pan.download("/影视/电影/Inception.mkv", dest_dir="./downloads")
+
+# 视频 4K/1080P/时长/编码深度元数据
+info = pan.get_media_info("/影视/电影/Inception.mkv")
+print(info["resolution"], info["duration"], info["video_codec"])
+
+# 用户信息与容量配额
+user = pan.whoami()
+quota = pan.get_quota()
+```
+
+---
+
+## 12. 常见问题与排错 (FAQ)
 
 ### Q1: 运行命令时提示 `401 Unauthorized` 或 Token 过期？
 **A**: `bdpan-cli` 内置了基于 `refresh_token` 的自动无感刷新机制。如果连续长时间未活跃导致 `refresh_token` 彻底失效，只需重新执行一次登录命令即可刷新授权：
@@ -399,4 +458,5 @@ bdpan auth login
 
 | 版本 | 日期 | 变更摘要 |
 |:---|:---|:---|
+| V1.1.0 | 2026-10-29 | 增加 Python SDK 开发者接入指南（`BaiduPan` 高层门面类使用） |
 | V1.0.0 | 2026-10-29 | 首次发布全功能用户使用手册，涵盖环境、授权、基础命令、传输、影视刮削、安全撤销、多账号、可观测性与 MCP 集成 |

@@ -1,12 +1,8 @@
-"""命令行入口：列出网盘目录。"""
+"""bdpan-cli: 百度网盘工程化 CLI 管理工具与 Python 开发者 SDK。"""
 
-import sys
-
-from bdpan_cli._vendor import openapi_client
-from bdpan_cli._vendor.openapi_client.api.fileinfo_api import FileinfoApi
-from bdpan_cli._vendor.openapi_client.rest import ApiException
-
-from bdpan_cli.auth import TokenManager
+from bdpan_cli.account import AccountClient, AccountError
+from bdpan_cli.auth import AuthorizationNeeded, TokenManager
+from bdpan_cli.client import BaiduPan
 from bdpan_cli.config import (
     AppConfig,
     ConfigError,
@@ -14,16 +10,37 @@ from bdpan_cli.config import (
     load_config,
     save_global_config,
 )
+from bdpan_cli.downloader import DownloadError, Downloader
+from bdpan_cli.file_manager import FileManager, FileManagerError
+from bdpan_cli.media_info import MediaInfoClient, MediaInfoError
+from bdpan_cli.uploader import UploadError, Uploader
 from bdpan_cli._version import __version__
-
 from bdpan_cli.cli import main
 
 __all__ = [
+    # 核心高层客户端 (Python SDK)
+    "BaiduPan",
+    # 专用子客户端
+    "FileManager",
+    "Uploader",
+    "Downloader",
+    "AccountClient",
+    "MediaInfoClient",
+    "TokenManager",
+    # 常用配置与凭证
+    "AppConfig",
+    "load_config",
+    "save_global_config",
+    "get_global_config_path",
+    # 核心异常类
+    "ConfigError",
+    "FileManagerError",
+    "UploadError",
+    "DownloadError",
+    "AccountError",
+    "MediaInfoError",
+    "AuthorizationNeeded",
+    # 命令行入口与版本
     "main",
     "__version__",
-    "AppConfig",
-    "ConfigError",
-    "load_config",
-    "get_global_config_path",
-    "save_global_config",
 ]
